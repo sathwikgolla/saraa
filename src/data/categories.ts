@@ -5,18 +5,32 @@ const img = (id: string) =>
 
 export const categories: Category[] = [
   {
-    id: "men",
-    name: "Men",
-    slug: "men",
-    image: img("photo-1521572163474-6864f9cf17ab"),
-    description: "T-shirts, shirts & casuals",
-  },
-  {
     id: "women",
     name: "Women",
     slug: "women",
     image: img("photo-1566206091558-7f218b696731"),
-    description: "Kurtas, dresses & more",
+    description: "Kurtas, dresses, tops & ethnic wear",
+  },
+  {
+    id: "men",
+    name: "Men",
+    slug: "men",
+    image: img("photo-1521572163474-6864f9cf17ab"),
+    description: "T-shirts, shirts, jeans & casuals",
+  },
+  {
+    id: "kids",
+    name: "Kids",
+    slug: "kids",
+    image: img("photo-1519457431-44ccd64a579b"),
+    description: "Boys, girls & festive party wear",
+  },
+  {
+    id: "footwear",
+    name: "Footwear",
+    slug: "footwear",
+    image: img("photo-1542291026-7eec264c27ff"),
+    description: "Sneakers, running shoes & mojris",
   },
   {
     id: "electronics",
@@ -38,13 +52,6 @@ export const categories: Category[] = [
     slug: "beauty",
     image: img("photo-1596462502278-27bfdc403348"),
     description: "Skincare, makeup & fragrances",
-  },
-  {
-    id: "footwear",
-    name: "Footwear",
-    slug: "footwear",
-    image: img("photo-1542291026-7eec264c27ff"),
-    description: "Sneakers, sandals & more",
   },
   {
     id: "accessories",

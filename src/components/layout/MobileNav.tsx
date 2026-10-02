@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 
 export function MobileNav() {
   const pathname = usePathname();
+  if (pathname?.startsWith("/admin")) return null;
   const { cart, wishlist, user } = useStore();
   const cartCount = cart.reduce((n, i) => n + i.qty, 0);
 

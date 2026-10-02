@@ -7,6 +7,7 @@ import { getProductById } from "@/data/products";
 import { useStore } from "@/context/StoreContext";
 import { QuantitySelector } from "@/components/product/QuantitySelector";
 import { PriceDisplay } from "@/components/ui/PriceDisplay";
+import { handleImageError } from "@/lib/utils";
 
 export function CartItem({ item }: { item: CartItemType }) {
   const { updateQty, removeFromCart, moveToWishlist } = useStore();
@@ -22,7 +23,14 @@ export function CartItem({ item }: { item: CartItemType }) {
         className="h-24 w-24 shrink-0 overflow-hidden rounded-md border border-neutral-200 bg-white"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={product.images[0]} alt={product.name} className="h-full w-full object-cover" />
+        <img
+          src={product.images[0]}
+          alt={product.name}
+          loading="lazy"
+          decoding="async"
+          onError={handleImageError}
+          className="h-full w-full object-cover"
+        />
       </Link>
 
       <div className="flex min-w-0 flex-1 flex-col">

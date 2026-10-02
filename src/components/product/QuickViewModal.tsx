@@ -12,7 +12,7 @@ import { PriceDisplay } from "@/components/ui/PriceDisplay";
 import { Button } from "@/components/ui/Button";
 import { QuantitySelector } from "@/components/product/QuantitySelector";
 import { StockBadge } from "@/components/product/StockBadge";
-import { cn } from "@/lib/utils";
+import { cn, handleImageError } from "@/lib/utils";
 
 export function QuickViewModal({
   product,
@@ -61,7 +61,13 @@ export function QuickViewModal({
         <div>
           <div className="overflow-hidden rounded-lg border border-neutral-200 bg-neutral-50">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={product.images[img]} alt={product.name} className="aspect-square w-full object-cover" />
+            <img
+              src={product.images[img]}
+              alt={product.name}
+              decoding="async"
+              onError={handleImageError}
+              className="aspect-square w-full object-cover"
+            />
           </div>
           {product.images.length > 1 && (
             <div className="mt-2 flex gap-2">
@@ -75,7 +81,14 @@ export function QuickViewModal({
                   )}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt="" className="h-full w-full object-cover" />
+                  <img
+                    src={src}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    onError={handleImageError}
+                    className="h-full w-full object-cover"
+                  />
                 </button>
               ))}
             </div>

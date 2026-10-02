@@ -27,8 +27,9 @@ import { categories } from "@/data/categories";
 import { cn } from "@/lib/utils";
 
 export function Navbar() {
-  const { cart, wishlist, user, logout, compare, theme, toggleTheme } = useStore();
+  const { cart, wishlist, user, logout, compare, theme, toggleTheme, hydrated } = useStore();
   const pathname = usePathname();
+  if (pathname?.startsWith("/admin")) return null;
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeCategory = pathname === "/products" ? searchParams.get("category") ?? "all" : "";
@@ -148,9 +149,10 @@ export function Navbar() {
             <button
               onClick={toggleTheme}
               aria-label="Toggle theme"
+              suppressHydrationWarning
               className="flex h-11 items-center justify-center rounded-md px-2 text-neutral-600 hover:bg-neutral-100 hover:text-black"
             >
-              {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+              {hydrated && theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
             </button>
 
             {/* Notifications */}

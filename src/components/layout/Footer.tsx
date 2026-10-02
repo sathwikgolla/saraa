@@ -1,9 +1,14 @@
+"use client";
+
 import Link from "next/link";
-import { CreditCard, Globe, Mail, MessageCircle, RotateCcw, Send, Truck } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { CreditCard, Globe, Mail, MessageCircle, RotateCcw, Send, ShieldCheck, Truck } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
 import { categories } from "@/data/categories";
 
 export function Footer() {
+  const pathname = usePathname();
+  if (pathname?.startsWith("/admin")) return null;
   return (
     <footer className="mt-16 border-t border-neutral-200 bg-neutral-50 pb-20 lg:pb-0">
       {/* Trust bar */}
@@ -43,8 +48,7 @@ export function Footer() {
         <div className="col-span-2 lg:col-span-1">
           <Logo />
           <p className="mt-3 text-sm leading-relaxed text-neutral-500">
-            Saara is your everyday online marketplace for fashion, electronics, home
-            essentials and more — quality products at honest prices.
+            Miracle Collections is your premier single-store fashion and footwear destination — quality styles at honest prices.
           </p>
           <div className="mt-4 flex gap-2">
             {[Send, MessageCircle, Globe].map((Icon, i) => (
@@ -128,9 +132,9 @@ export function Footer() {
 
       <div className="border-t border-neutral-200">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-5 text-xs text-neutral-400 sm:flex-row sm:px-6">
-          <p>© {new Date().getFullYear()} Saara Marketplace. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Miracle Collections. All rights reserved.</p>
           <p className="flex items-center gap-1.5">
-            <Mail size={12} /> Made for demonstration — no real products are sold.
+            <Mail size={12} /> Curated Fashion & Footwear
           </p>
         </div>
       </div>

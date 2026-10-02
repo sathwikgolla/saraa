@@ -101,3 +101,17 @@ export function uid(): string {
   }
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
+
+/**
+ * Lightweight SVG data URI placeholder used whenever remote image fails to load.
+ */
+export const FALLBACK_IMAGE = `data:image/svg+xml;utf8,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 750" fill="none"><rect width="100%" height="100%" fill="#f5f5f5"/><rect x="20" y="20" width="560" height="710" rx="16" fill="#ebebeb" stroke="#dedede" stroke-width="2"/><circle cx="300" cy="340" r="48" fill="#d4d4d4"/><path d="M220 500l60-70 50 50 60-80 90 100H220z" fill="#d4d4d4"/><text x="300" y="580" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="22" fill="#737373" letter-spacing="2">MIRACLE COLLECTIONS</text><text x="300" y="612" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="14" fill="#a3a3a3">Image Preview Unavailable</text></svg>`
+)}`;
+
+export function handleImageError(e: React.SyntheticEvent<HTMLImageElement, Event>) {
+  const target = e.currentTarget;
+  if (target.src !== FALLBACK_IMAGE) {
+    target.src = FALLBACK_IMAGE;
+  }
+}

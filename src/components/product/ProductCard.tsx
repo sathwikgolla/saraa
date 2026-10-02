@@ -9,7 +9,7 @@ import { Rating } from "@/components/ui/Rating";
 import { PriceDisplay } from "@/components/ui/PriceDisplay";
 import { StockBadge } from "@/components/product/StockBadge";
 import { QuickViewModal } from "@/components/product/QuickViewModal";
-import { cn, discountPercent, formatCount } from "@/lib/utils";
+import { cn, discountPercent, formatCount, handleImageError } from "@/lib/utils";
 
 interface ProductCardProps {
   product: Product;
@@ -66,6 +66,8 @@ export function ProductCard({ product, showAddToCart = true, className }: Produc
             src={product.images[0]}
             alt={product.name}
             loading="lazy"
+            decoding="async"
+            onError={handleImageError}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
 

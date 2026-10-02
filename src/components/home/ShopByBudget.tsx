@@ -1,0 +1,98 @@
+import Link from "next/link";
+import { ArrowRight, Wallet } from "lucide-react";
+
+const BUDGET_TIERS = [
+  {
+    label: "Under ₹499",
+    description: "T-shirts, sunglasses, accessories & everyday essentials",
+    href: "/products?maxPrice=499",
+    badge: "Budget Friendly",
+    popular: "Pure Cotton Tees, UV Shades",
+  },
+  {
+    label: "Under ₹999",
+    description: "Printed kurtis, casual footwear & kids festive sets",
+    href: "/products?maxPrice=999",
+    badge: "Sweet Spot",
+    popular: "Anarkali Sets, Wedge Sandals",
+  },
+  {
+    label: "Under ₹1,499",
+    description: "Denim jackets, casual sneakers & everyday bags",
+    href: "/products?maxPrice=1499",
+    badge: "Most Popular",
+    popular: "Denim Outerwear, Walk Sneakers",
+  },
+  {
+    label: "Under ₹2,499",
+    description: "High-top boots, genuine leather items & full ensembles",
+    href: "/products?maxPrice=2499",
+    badge: "Premium Finds",
+    popular: "Street Boots, Leather Bags",
+  },
+];
+
+export function ShopByBudget() {
+  return (
+    <section className="mx-auto max-w-7xl px-4 pt-14 sm:px-6">
+      <div className="mb-6 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-neutral-100">
+              <Wallet size={17} className="text-black" />
+            </span>
+            <span className="text-xs font-bold uppercase tracking-wider text-neutral-500">
+              Price-Smart Curation
+            </span>
+          </div>
+          <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-black sm:text-3xl">
+            Shop By Budget
+          </h2>
+          <p className="mt-1 text-xs text-neutral-500 sm:text-sm">
+            Trendy styles and quality footwear tailored to suit your pocket
+          </p>
+        </div>
+        <Link
+          href="/products?sort=price-low"
+          className="inline-flex items-center gap-1.5 text-sm font-bold text-black transition-colors hover:underline"
+        >
+          Sort low to high <ArrowRight size={15} />
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {BUDGET_TIERS.map((tier) => (
+          <Link
+            key={tier.label}
+            href={tier.href}
+            className="group flex flex-col justify-between rounded-2xl border border-neutral-200 bg-white p-5 transition-all duration-200 hover:-translate-y-1 hover:border-black/30 hover:shadow-md"
+          >
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-[10px] font-bold text-neutral-700">
+                  {tier.badge}
+                </span>
+                <span className="text-xs font-bold text-neutral-400 group-hover:text-black">
+                  Explore →
+                </span>
+              </div>
+
+              <h3 className="mt-3 text-2xl font-black tracking-tight text-black">
+                {tier.label}
+              </h3>
+              <p className="mt-1 text-xs leading-relaxed text-neutral-500">
+                {tier.description}
+              </p>
+            </div>
+
+            <div className="mt-4 border-t border-neutral-100 pt-3">
+              <p className="text-[11px] font-medium text-neutral-400">
+                Popular: <span className="font-semibold text-neutral-700">{tier.popular}</span>
+              </p>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}

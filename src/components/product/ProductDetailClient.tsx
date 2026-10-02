@@ -27,7 +27,7 @@ import { ProductImageZoom } from "@/components/product/ProductImageZoom";
 import { DeliveryChecker } from "@/components/product/DeliveryChecker";
 import { ReviewsSection } from "@/components/product/ReviewsSection";
 import { ProductQA } from "@/components/product/ProductQA";
-import { cn, discountPercent, formatCount, formatDeliveryDate } from "@/lib/utils";
+import { cn, discountPercent, formatCount, formatDeliveryDate, handleImageError } from "@/lib/utils";
 
 export function ProductDetailClient({ product }: { product: Product }) {
   const router = useRouter();
@@ -342,6 +342,9 @@ export function ProductDetailClient({ product }: { product: Product }) {
                   <img
                     src={p.images[0]}
                     alt={p.name}
+                    loading="lazy"
+                    decoding="async"
+                    onError={handleImageError}
                     className="h-14 w-14 rounded object-cover"
                   />
                   <div className="min-w-0">

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, X, ZoomIn } from "lucide-react";
-import { cn, discountPercent } from "@/lib/utils";
+import { cn, discountPercent, handleImageError } from "@/lib/utils";
 
 export function ProductImageZoom({
   images,
@@ -17,6 +17,7 @@ export function ProductImageZoom({
 }) {
   const [active, setActive] = useState(0);
   const [zoom, setZoom] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const [origin, setOrigin] = useState("50% 50%");
 
   const pct = discountPercent(mrp, price);
@@ -37,16 +38,21 @@ export function ProductImageZoom({
         <div
           className="relative aspect-square w-full cursor-zoom-in overflow-hidden"
           onMouseMove={onMove}
-          onMouseLeave={() => setOrigin("50% 50%")}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => {
+            setIsHovered(false);
+            setOrigin("50% 50%");
+          }}
           onClick={() => setZoom(true)}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={images[active]}
             alt={alt}
+            decoding="async"
+            onError={handleImageError}
             className="h-full w-full object-cover transition-transform duration-200"
-            style={{ transformOrigin: origin, transform: zoom ? "none" : "scale(1.6)" }}
-            onMouseEnter={() => {}}
+            style={{ transformOrigin: origin, transform: isHovered && !zoom ? "scale(1.6)" : "scale(1)" }}
           />
           <span className="pointer-events-none absolute bottom-2 right-2 flex items-center gap-1 rounded bg-black/70 px-2 py-1 text-[11px] font-semibold text-white">
             <ZoomIn size={12} /> Click to zoom
@@ -92,7 +98,14 @@ export function ProductImageZoom({
               )}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={img} alt="" className="h-full w-full object-cover" />
+              <img
+                src={img}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                onError={handleImageError}
+                className="h-full w-full object-cover"
+              />
             </button>
           ))}
         </div>
@@ -130,6 +143,8 @@ export function ProductImageZoom({
           <img
             src={images[active]}
             alt={alt}
+            decoding="async"
+            onError={handleImageError}
             onClick={(e) => e.stopPropagation()}
             className="max-h-[85vh] max-w-[90vw] object-contain"
           />

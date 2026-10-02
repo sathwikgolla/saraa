@@ -15,11 +15,11 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "Saara — Online Shopping for Fashion, Electronics & More",
-    template: "%s | Saara",
+    default: "Miracle Collections — Fashion, Clothing & Footwear",
+    template: "%s | Miracle Collections",
   },
   description:
-    "Saara is an online marketplace for fashion, electronics, home essentials and more. Quality products at honest prices.",
+    "Miracle Collections is your premier single-store online destination for Women's, Men's, Kids' clothing and Footwear. Quality styles at honest prices.",
 };
 
 export default function RootLayout({
@@ -27,6 +27,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
+      <head>
+        <link rel="dns-prefetch" href="https://images.unsplash.com" />
+        <link rel="preconnect" href="https://images.unsplash.com" crossOrigin="anonymous" />
+      </head>
       <body className="flex min-h-full flex-col bg-white pb-16 font-sans text-black lg:pb-0">
         <StoreProvider>
           <Suspense fallback={null}>

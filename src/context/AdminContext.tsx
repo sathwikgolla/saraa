@@ -45,6 +45,7 @@ import {
   SEED_STOCK_LEDGER,
   SEED_YOUTUBE_VIDEOS,
 } from "@/data/adminSeed";
+import { useStore } from "@/context/StoreContext";
 
 export interface AdminToast {
   id: string;
@@ -178,7 +179,17 @@ function useStoredAdmin<T>(key: string, fallback: T) {
 }
 
 export function AdminProvider({ children }: { children: ReactNode }) {
-  const [products, setProducts] = useStoredAdmin<AdminProduct[]>("miracle:admin:products", SEED_PRODUCTS);
+  const {
+    products: storeProducts,
+    saveProduct: storeSaveProduct,
+    deleteProduct: storeDeleteProduct,
+    toggleProductStatus: storeToggleProductStatus,
+    adjustStock: storeAdjustStock,
+    bulkUpdateStock: storeBulkUpdateStock,
+    resetProducts: storeResetProducts,
+  } = useStore();
+
+  const products = storeProducts as unknown as AdminProduct[];
   const [categories, setCategories] = useStoredAdmin<AdminCategory[]>("miracle:admin:categories", SEED_CATEGORIES);
   const [filters, setFilters] = useStoredAdmin<CategoryFilter[]>("miracle:admin:filters", SEED_FILTERS);
   const [orders, setOrders] = useStoredAdmin<AdminOrder[]>("miracle:admin:orders", SEED_ORDERS);
@@ -420,103 +431,43 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     [currentStaff, logAudit, adminToast, setOrders]
   );
 
-  // ---------------- Products ----------------
+  // ---------------- Products (Synchronized with Store) ----------------
   const saveProduct = useCallback(
     (patch: Partial<AdminProduct>): AdminProduct => {
-      const now = new Date().toISOString();
-      let savedProduct: AdminProduct;
-
-      if (patch.id) {
-        // Edit existing
-        setProducts((prev) =>
-          prev.map((p) => {
-            if (p.id === patch.id) {
-              savedProduct = {
-                ...p,
-                ...patch,
-                updatedAt: now,
-                stock: patch.variants ? patch.variants.reduce((acc, v) => acc + v.stock, 0) : p.stock,
-              } as AdminProduct;
-              return savedProduct;
-            }
-            return p;
-          })
-        );
-        logAudit("Products", "Update", `Updated product '${patch.name || patch.id}'`);
-        adminToast("Product updated successfully", "success");
-      } else {
-        // Create new
-        const newId = "prd_" + Math.random().toString(36).slice(2, 8);
-        const variants = patch.variants || [
-          {
-            id: "var_" + Math.random().toString(36).slice(2, 7),
-            sku: `MC-${(patch.name || "PRD").slice(0, 4).toUpperCase()}-STD`,
-            size: "Standard",
-            color: "Default",
-            stock: 20,
-            reservedStock: 0,
-          },
-        ];
-        savedProduct = {
-          id: newId,
-          slug:
-            patch.slug ||
-            (patch.name ? patch.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") : `product-${newId}`),
-          name: patch.name || "Untitled Product",
-          brand: patch.brand || "Miracle Collections",
-          categoryId: patch.categoryId || "women",
-          subCategory: patch.subCategory || "General",
-          price: patch.price || 999,
-          mrp: patch.mrp || 1999,
-          costPrice: patch.costPrice || 450,
-          rating: 5.0,
-          reviews: 0,
-          images: patch.images && patch.images.length > 0 ? patch.images : ["https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=800&q=80"],
-          colors: patch.colors || ["Black"],
-          sizes: patch.sizes || ["M", "L"],
-          badges: patch.badges || ["New"],
-          description: patch.description || "",
-          specifications: patch.specifications || [],
-          variants,
-          stock: variants.reduce((acc, v) => acc + v.stock, 0),
-          status: patch.status || "live",
-          createdAt: now,
-          updatedAt: now,
-        };
-        setProducts((prev) => [savedProduct, ...prev]);
-        logAudit("Products", "Create", `Created product '${savedProduct.name}'`);
-        adminToast(`Product "${savedProduct.name}" created`, "success");
-      }
-      return savedProduct!;
+      const saved = storeSaveProduct(patch as any);
+      logAudit(
+        "Products",
+        patch.id ? "Update" : "Create",
+        `${patch.id ? "Updated" : "Created"} product '${saved.name}'`
+      );
+      adminToast(
+        patch.id ? "Product updated successfully" : `Product "${saved.name}" created`,
+        "success"
+      );
+      return saved as unknown as AdminProduct;
     },
-    [logAudit, adminToast, setProducts]
+    [storeSaveProduct, logAudit, adminToast]
   );
 
   const deleteProduct = useCallback(
     (productId: string) => {
       const match = products.find((p) => p.id === productId);
-      setProducts((prev) => prev.filter((p) => p.id !== productId));
+      storeDeleteProduct(productId);
       logAudit("Products", "Delete", `Deleted product '${match?.name || productId}'`);
       adminToast("Product deleted", "info");
     },
-    [products, logAudit, adminToast, setProducts]
+    [products, storeDeleteProduct, logAudit, adminToast]
   );
 
   const toggleProductStatus = useCallback(
     (productId: string) => {
-      setProducts((prev) =>
-        prev.map((p) => {
-          if (p.id === productId) {
-            const nextStatus = p.status === "live" ? "draft" : "live";
-            logAudit("Products", "Update", `Changed '${p.name}' status to ${nextStatus}`);
-            adminToast(`Product is now ${nextStatus.toUpperCase()}`, "info");
-            return { ...p, status: nextStatus };
-          }
-          return p;
-        })
-      );
+      const match = products.find((p) => p.id === productId);
+      storeToggleProductStatus(productId);
+      const nextStatus = match?.status === "live" ? "draft" : "live";
+      logAudit("Products", "Update", `Changed '${match?.name || productId}' status to ${nextStatus}`);
+      adminToast(`Product is now ${nextStatus.toUpperCase()}`, "info");
     },
-    [logAudit, adminToast, setProducts]
+    [products, storeToggleProductStatus, logAudit, adminToast]
   );
 
   // ---------------- Inventory & Stock ----------------
@@ -534,25 +485,18 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       let prevCount = 0;
       let newCount = 0;
 
-      setProducts((prev) =>
-        prev.map((p) => {
-          if (p.id === productId) {
-            prodName = p.name;
-            const updatedVariants = p.variants.map((v) => {
-              if (v.sku === variantSku) {
-                prevCount = v.stock;
-                newCount = Math.max(0, v.stock + change);
-                varLabel = `${v.color} / ${v.size}`;
-                return { ...v, stock: newCount };
-              }
-              return v;
-            });
-            const totalStock = updatedVariants.reduce((s, v) => s + v.stock, 0);
-            return { ...p, variants: updatedVariants, stock: totalStock };
-          }
-          return p;
-        })
-      );
+      const p = products.find((x) => x.id === productId);
+      if (p) {
+        prodName = p.name;
+        const v = p.variants.find((x) => x.sku === variantSku);
+        if (v) {
+          prevCount = v.stock;
+          newCount = Math.max(0, v.stock + change);
+          varLabel = `${v.color} / ${v.size}`;
+        }
+      }
+
+      storeAdjustStock(productId, variantSku, change, type, reason);
 
       const ledgerEntry: StockLedgerEntry = {
         id: "led_" + Math.random().toString(36).slice(2, 9),
@@ -577,70 +521,17 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       );
       adminToast(`Stock updated for ${variantSku} (${prevCount} → ${newCount})`, "success");
     },
-    [currentStaff, logAudit, adminToast, setProducts, setStockLedger]
+    [products, currentStaff, logAudit, adminToast, storeAdjustStock, setStockLedger]
   );
 
   const bulkUpdateStock = useCallback(
     (rows: { sku: string; stock: number }[]) => {
-      let updatedCount = 0;
-      const errors: string[] = [];
-      const timestamp = new Date().toISOString();
-      const newLedgers: StockLedgerEntry[] = [];
-
-      setProducts((prev) =>
-        prev.map((p) => {
-          let productModified = false;
-          const updatedVariants = p.variants.map((v) => {
-            const match = rows.find((r) => r.sku.trim().toUpperCase() === v.sku.trim().toUpperCase());
-            if (match && !isNaN(match.stock) && match.stock >= 0) {
-              const diff = match.stock - v.stock;
-              if (diff !== 0) {
-                newLedgers.push({
-                  id: "led_" + Math.random().toString(36).slice(2, 9),
-                  timestamp,
-                  productId: p.id,
-                  productName: p.name,
-                  variantSku: v.sku,
-                  variantLabel: `${v.color} / ${v.size}`,
-                  type: diff > 0 ? "restock" : "manual_adjust",
-                  change: diff,
-                  previousStock: v.stock,
-                  newStock: match.stock,
-                  reason: "Bulk CSV Inventory Upload",
-                  staffName: currentStaff.name,
-                });
-                updatedCount++;
-                productModified = true;
-                return { ...v, stock: match.stock };
-              }
-            }
-            return v;
-          });
-
-          if (productModified) {
-            return {
-              ...p,
-              variants: updatedVariants,
-              stock: updatedVariants.reduce((s, x) => s + x.stock, 0),
-            };
-          }
-          return p;
-        })
-      );
-
-      if (newLedgers.length > 0) {
-        setStockLedger((prev) => [...newLedgers, ...prev]);
-        logAudit(
-          "Inventory",
-          "Adjust Stock",
-          `Bulk updated ${updatedCount} SKUs via CSV import`
-        );
-        adminToast(`Bulk updated ${updatedCount} inventory variants successfully!`, "success");
-      }
-
-      return { updated: updatedCount, errors };
+      const res = storeBulkUpdateStock(rows);
+      logAudit("Inventory", "Adjust Stock", `Bulk updated ${res.updated} SKUs via CSV import`);
+      adminToast(`Bulk updated ${res.updated} inventory variants successfully!`, "success");
+      return res;
     },
-    [currentStaff, logAudit, adminToast, setProducts, setStockLedger]
+    [storeBulkUpdateStock, logAudit, adminToast]
   );
 
   // ---------------- Categories & Filters ----------------
@@ -1004,7 +895,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const resetToSampleData = useCallback(() => {
-    setProducts(SEED_PRODUCTS);
+    storeResetProducts();
     setCategories(SEED_CATEGORIES);
     setFilters(SEED_FILTERS);
     setOrders(SEED_ORDERS);
@@ -1021,7 +912,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     adminToast("All admin modules reset to standard PRD seed data", "info");
   }, [
     adminToast,
-    setProducts,
+    storeResetProducts,
     setCategories,
     setFilters,
     setOrders,

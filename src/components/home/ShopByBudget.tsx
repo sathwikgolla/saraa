@@ -7,10 +7,10 @@ import { handleImageError } from "@/lib/utils";
 const BUDGET_TIERS = [
   {
     label: "Under ₹499",
-    description: "T-shirts, sunglasses, accessories & everyday essentials",
+    description: "Cotton t-shirts, basic tops, socks & everyday essentials",
     href: "/products?maxPrice=499",
     badge: "Budget Friendly",
-    popular: "Pure Cotton Tees, UV Shades",
+    popular: "Pure Cotton Tees, Relaxed Tops",
     image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=400&q=80",
   },
   {
@@ -23,7 +23,7 @@ const BUDGET_TIERS = [
   },
   {
     label: "Under ₹1,499",
-    description: "Denim jackets, casual sneakers & everyday bags",
+    description: "Denim jackets, casual sneakers & formal trousers",
     href: "/products?maxPrice=1499",
     badge: "Most Popular",
     popular: "Denim Outerwear, Walk Sneakers",
@@ -31,10 +31,10 @@ const BUDGET_TIERS = [
   },
   {
     label: "Under ₹2,499",
-    description: "High-top boots, genuine leather items & full ensembles",
+    description: "High-top boots, formal leather brogues & festive suits",
     href: "/products?maxPrice=2499",
     badge: "Premium Finds",
-    popular: "Street Boots, Leather Bags",
+    popular: "Street Boots, Leather Brogues",
     image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=400&q=80",
   },
 ];

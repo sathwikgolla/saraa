@@ -20,8 +20,8 @@ const LOOKS: LookBundle[] = [
     id: "women-festive",
     title: "Festive Fusion Ensemble",
     audience: "Women",
-    tagline: "Anarkali Kurta Set + Chic Wedge Sandals + Handcrafted Leather Sling",
-    productIds: ["p2", "p23", "p27"],
+    tagline: "Anarkali Kurta Set + Chic Wedge Sandals + Handcrafted Ethnic Juttis",
+    productIds: ["p2", "p23", "mc_f1"],
   },
   {
     id: "men-street",

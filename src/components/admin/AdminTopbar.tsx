@@ -13,12 +13,10 @@ import {
   PackagePlus,
   Plus,
   RefreshCw,
-  Search,
   Settings as SettingsIcon,
   ShieldCheck,
   Sparkles,
   Sun,
-  User,
 } from "lucide-react";
 import { useAdmin } from "@/context/AdminContext";
 import { useStore } from "@/context/StoreContext";
@@ -50,25 +48,16 @@ export function AdminTopbar({
   const [notifOpen, setNotifOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b border-neutral-200 bg-white/95 px-4 backdrop-blur-md sm:px-6">
-      {/* Left: Mobile Toggle & Search */}
+    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b border-neutral-200 bg-white/95 px-3 backdrop-blur-md sm:px-6">
+      {/* Left: Mobile Sidebar Toggle */}
       <div className="flex items-center gap-3">
         <button
           onClick={onOpenMobileSidebar}
-          className="flex h-9 w-9 items-center justify-center rounded-md border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100 hover:text-black lg:hidden"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100 hover:text-black lg:hidden"
           aria-label="Open sidebar"
         >
           <Menu className="h-5 w-5" />
         </button>
-
-        <div className="relative hidden md:block">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-          <input
-            type="text"
-            placeholder="Search orders, SKU, UTR, customer..."
-            className="w-72 rounded-md border border-neutral-300 bg-white py-1.5 pl-9 pr-4 text-xs text-black placeholder:text-neutral-400 focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
-          />
-        </div>
       </div>
 
       {/* Right Controls */}
@@ -96,7 +85,7 @@ export function AdminTopbar({
                 className="fixed inset-0 z-30"
                 onClick={() => setQuickMenuOpen(false)}
               />
-              <div className="absolute right-0 z-40 mt-2 w-56 rounded-lg border border-neutral-200 bg-white p-1.5 shadow-xl text-xs animate-fade-in">
+              <div className="absolute right-0 z-40 mt-2 w-56 max-w-[calc(100vw-2rem)] rounded-lg border border-neutral-200 bg-white p-1.5 shadow-xl text-xs animate-fade-in">
                 <Link
                   href="/admin/products"
                   onClick={() => setQuickMenuOpen(false)}
@@ -168,7 +157,7 @@ export function AdminTopbar({
           {notifOpen && (
             <>
               <div className="fixed inset-0 z-30" onClick={() => setNotifOpen(false)} />
-              <div className="absolute right-0 z-40 mt-2 w-80 rounded-xl border border-neutral-200 bg-white p-3 shadow-2xl text-xs animate-fade-in">
+              <div className="absolute right-0 z-40 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-neutral-200 bg-white p-3 shadow-2xl text-xs animate-fade-in">
                 <div className="flex items-center justify-between pb-2 border-b border-neutral-100">
                   <span className="font-bold text-black">Alerts & Notifications</span>
                   <span className="text-[10px] text-neutral-400 font-mono">Live</span>
@@ -233,7 +222,7 @@ export function AdminTopbar({
           {staffMenuOpen && (
             <>
               <div className="fixed inset-0 z-30" onClick={() => setStaffMenuOpen(false)} />
-              <div className="absolute right-0 z-40 mt-2 w-64 rounded-xl border border-neutral-200 bg-white p-2 shadow-2xl text-xs animate-fade-in">
+              <div className="absolute right-0 z-40 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-xl border border-neutral-200 bg-white p-2 shadow-2xl text-xs animate-fade-in">
                 {/* Active Admin Profile info */}
                 <div className="px-3 py-2 border-b border-neutral-100 mb-1">
                   <p className="font-bold text-black">{currentStaff.name}</p>

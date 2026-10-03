@@ -41,11 +41,11 @@ const OCCASIONS = [
     badge: "Little Smiles",
   },
   {
-    title: "Gifting & Accents",
-    tagline: "Genuine leather wallets, sling bags & shades",
-    image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=600&q=80",
-    href: "/products?category=accessories",
-    badge: "Perfect Gift",
+    title: "Active & Athleisure",
+    tagline: "Comfort training sneakers, knit joggers & active fits",
+    image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80",
+    href: "/products?category=footwear",
+    badge: "Active Fit",
   },
 ];
 

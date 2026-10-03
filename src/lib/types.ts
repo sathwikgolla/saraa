@@ -21,6 +21,16 @@ export interface Review {
   verified: boolean;
 }
 
+export interface ProductVariant {
+  id: string;
+  sku: string;
+  size: string;
+  color: string;
+  stock: number;
+  reservedStock?: number;
+  priceOverride?: number;
+}
+
 export interface Product {
   id: string;
   slug: string;
@@ -28,17 +38,23 @@ export interface Product {
   brand: string;
   description: string;
   categoryId: string;
+  subCategory?: string;
   price: number; // selling price
   mrp: number; // original price
+  costPrice?: number;
   rating: number;
   reviews: number;
   images: string[];
   colors: string[];
   sizes: string[];
-  badges: ("Trending" | "Best Seller" | "New")[];
+  badges: string[];
   specifications: Specification[];
-  reviewsList: Review[];
+  reviewsList?: Review[];
+  variants?: ProductVariant[];
   stock: number;
+  status?: "live" | "draft";
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CartItem {

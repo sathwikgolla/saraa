@@ -24,7 +24,7 @@ export function ProductEditModal({ product, onClose }: ProductEditModalProps) {
   const [name, setName] = useState(product?.name || "");
   const [slug, setSlug] = useState(product?.slug || "");
   const [brand, setBrand] = useState(product?.brand || "Miracle Collections");
-  const [categoryId, setCategoryId] = useState(product?.categoryId || categories[0]?.id || "women");
+  const [categoryId, setCategoryId] = useState(product?.categoryId || categories[0]?.id || "clothing");
   const [subCategory, setSubCategory] = useState(product?.subCategory || "General");
   const [price, setPrice] = useState(product?.price || 1299);
   const [mrp, setMrp] = useState(product?.mrp || 2499);
@@ -407,7 +407,75 @@ export function ProductEditModal({ product, onClose }: ProductEditModalProps) {
               </button>
             </div>
 
-            <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white">
+            {/* Mobile View: Stacked Variant Cards (< sm) */}
+            <div className="block sm:hidden space-y-2.5">
+              {variants.map((v, i) => (
+                <div
+                  key={v.id || i}
+                  className="rounded-lg border border-neutral-200 bg-white p-3 space-y-2 shadow-2xs"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-wide">
+                      Variant #{i + 1}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveVariant(i)}
+                      className="text-neutral-400 hover:text-red-600 p-1"
+                      aria-label="Remove variant"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="col-span-2">
+                      <label className="text-[10px] text-neutral-500 font-medium">SKU</label>
+                      <input
+                        type="text"
+                        value={v.sku}
+                        onChange={(e) => handleUpdateVariant(i, "sku", e.target.value)}
+                        placeholder="SKU"
+                        className="w-full rounded border border-neutral-300 bg-white px-2 py-1 text-black font-mono text-xs focus:border-black focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-neutral-500 font-medium">Size</label>
+                      <input
+                        type="text"
+                        value={v.size}
+                        onChange={(e) => handleUpdateVariant(i, "size", e.target.value)}
+                        placeholder="Size (e.g. M, 9)"
+                        className="w-full rounded border border-neutral-300 bg-white px-2 py-1 text-black text-xs focus:border-black focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-neutral-500 font-medium">Color</label>
+                      <input
+                        type="text"
+                        value={v.color}
+                        onChange={(e) => handleUpdateVariant(i, "color", e.target.value)}
+                        placeholder="Color"
+                        className="w-full rounded border border-neutral-300 bg-white px-2 py-1 text-black text-xs focus:border-black focus:outline-none"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="text-[10px] text-neutral-500 font-medium">Available Stock</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={v.stock}
+                        onChange={(e) => handleUpdateVariant(i, "stock", Number(e.target.value))}
+                        className="w-full rounded border border-neutral-300 bg-white px-2 py-1 text-black font-mono text-xs font-bold focus:border-black focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop View: Table (>= sm) */}
+            <div className="hidden sm:block overflow-x-auto rounded-lg border border-neutral-200 bg-white">
               <table className="w-full text-left border-collapse">
                 <thead className="bg-neutral-50">
                   <tr className="border-b border-neutral-200 text-neutral-600 text-[11px] font-semibold">

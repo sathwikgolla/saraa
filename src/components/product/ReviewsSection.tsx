@@ -17,7 +17,7 @@ export function ReviewsSection({ product }: { product: Product }) {
   const [body, setBody] = useState("");
 
   const submitted = userReviews[product.id] ?? [];
-  const all = [...submitted, ...product.reviewsList];
+  const all = [...submitted, ...(product.reviewsList ?? [])];
   const hasPurchased = orders.some((o) => o.items.some((i) => i.productId === product.id));
 
   const distribution = useMemo(() => {

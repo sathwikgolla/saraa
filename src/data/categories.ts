@@ -5,67 +5,31 @@ const img = (id: string) =>
 
 export const categories: Category[] = [
   {
-    id: "women",
-    name: "Women",
-    slug: "women",
-    image: img("photo-1566206091558-7f218b696731"),
-    description: "Kurtas, dresses, tops & ethnic wear",
-  },
-  {
-    id: "men",
-    name: "Men",
-    slug: "men",
+    id: "clothing",
+    name: "Clothing",
+    slug: "clothing",
     image: img("photo-1521572163474-6864f9cf17ab"),
-    description: "T-shirts, shirts, jeans & casuals",
-  },
-  {
-    id: "kids",
-    name: "Kids",
-    slug: "kids",
-    image: img("photo-1519457431-44ccd64a579b"),
-    description: "Boys, girls & festive party wear",
+    description: "Shirts, T-shirts, dresses, kurtas, jeans, jackets & kids wear",
   },
   {
     id: "footwear",
     name: "Footwear",
     slug: "footwear",
     image: img("photo-1542291026-7eec264c27ff"),
-    description: "Sneakers, running shoes & mojris",
-  },
-  {
-    id: "electronics",
-    name: "Electronics",
-    slug: "electronics",
-    image: img("photo-1505740420928-5e560c06d30e"),
-    description: "Headphones, wearables & gadgets",
-  },
-  {
-    id: "home",
-    name: "Home & Kitchen",
-    slug: "home-kitchen",
-    image: img("photo-1556911220-bff31c812dba"),
-    description: "Cookware, decor & essentials",
-  },
-  {
-    id: "beauty",
-    name: "Beauty",
-    slug: "beauty",
-    image: img("photo-1596462502278-27bfdc403348"),
-    description: "Skincare, makeup & fragrances",
-  },
-  {
-    id: "accessories",
-    name: "Accessories",
-    slug: "accessories",
-    image: img("photo-1491637639811-60e2756cc1c7"),
-    description: "Bags, watches & eyewear",
+    description: "Sneakers, running shoes, loafers, formal shoes & sandals",
   },
 ];
 
 export function getCategory(id: string): Category | undefined {
+  if (id === "men" || id === "women" || id === "kids") {
+    return categories.find((c) => c.id === "clothing");
+  }
   return categories.find((c) => c.id === id);
 }
 
 export function getCategoryBySlug(slug: string): Category | undefined {
+  if (slug === "men" || slug === "women" || slug === "kids") {
+    return categories.find((c) => c.slug === "clothing");
+  }
   return categories.find((c) => c.slug === slug);
 }

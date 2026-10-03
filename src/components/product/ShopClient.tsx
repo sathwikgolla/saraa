@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { RotateCcw, SlidersHorizontal, X } from "lucide-react";
-import { products } from "@/data/products";
+import { useStore } from "@/context/StoreContext";
 import { getCategory } from "@/data/categories";
 import { ProductGrid } from "@/components/product/ProductGrid";
 import {
@@ -51,10 +51,16 @@ function toParams(filters: Filters, sort: SortOption, query: string): Record<str
 export function ShopClient() {
   const router = useRouter();
   const sp = useSearchParams();
+  const { products } = useStore();
   const [showFilters, setShowFilters] = useState(false);
   const [visible, setVisible] = useState(12);
 
   const query = sp.get("q") ?? "";
+
+  // Only display live products to customers
+  const liveProducts = useMemo(() => {
+    return products.filter((p) => p.status !== "draft");
+  }, [products]);
 
   const filters: Filters = {
     category: sp.get("category") ?? "all",
@@ -96,14 +102,14 @@ export function ShopClient() {
   // Products matching category + search only (pool for dynamic brand/size/color lists).
   const pool = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return products.filter((p) => {
+    return liveProducts.filter((p) => {
       if (filters.category !== "all" && p.categoryId !== filters.category) return false;
       if (!q) return true;
       const catName = getCategory(p.categoryId)?.name.toLowerCase() ?? "";
       const hay = `${p.name} ${p.brand} ${p.description} ${catName}`.toLowerCase();
       return hay.includes(q);
     });
-  }, [filters.category, query]);
+  }, [liveProducts, filters.category, query]);
 
   const availableBrands = useMemo(
     () => [...new Set(pool.map((p) => p.brand))].sort((a, b) => a.localeCompare(b)),
@@ -120,7 +126,7 @@ export function ShopClient() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    let list = products.filter((p) => {
+    let list = liveProducts.filter((p) => {
       if (filters.category !== "all" && p.categoryId !== filters.category) return false;
       if (p.price < filters.minPrice || p.price > filters.maxPrice) return false;
       if (p.rating < filters.rating) return false;
@@ -172,7 +178,7 @@ export function ShopClient() {
         sorted.sort((a, b) => b.reviews - a.reviews);
     }
     return sorted;
-  }, [filters, sort, query]);
+  }, [liveProducts, filters, sort, query]);
 
   const activeCategory = filters.category === "all" ? undefined : getCategory(filters.category);
   const title = query ? `Results for "${query}"` : activeCategory?.name ?? "All Products";

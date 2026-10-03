@@ -4,23 +4,26 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Clock, Search, TrendingUp } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
-import { products } from "@/data/products";
 import { cn } from "@/lib/utils";
 
 const POPULAR = [
   "shirt",
   "shirt for men",
   "black shirt",
-  "formal shirt",
-  "shirt under ₹1000",
-  "earbuds",
+  "kurta",
+  "anarkali kurta",
+  "formal shoes",
   "running shoes",
-  "serum",
+  "sneakers",
+  "loafers",
+  "trousers",
+  "cotton t-shirt",
+  "wedding sherwani",
 ];
 
 export function SearchBar({ className, autoFocus }: { className?: string; autoFocus?: boolean }) {
   const router = useRouter();
-  const { recentSearches, addRecentSearch, clearRecentSearches } = useStore();
+  const { recentSearches, addRecentSearch, clearRecentSearches, products } = useStore();
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(-1);
@@ -40,7 +43,7 @@ export function SearchBar({ className, autoFocus }: { className?: string; autoFo
   }, []);
 
   const term = value.trim().toLowerCase();
-  const suggestions = useMemoSuggestions(term);
+  const suggestions = useMemoSuggestions(term, products);
 
   const go = (q: string) => {
     const t = q.trim();
@@ -165,14 +168,14 @@ export function SearchBar({ className, autoFocus }: { className?: string; autoFo
   );
 }
 
-function useMemoSuggestions(term: string): string[] {
+function useMemoSuggestions(term: string, productList: { name: string; brand: string }[] = []): string[] {
   if (!term) return [];
   const fromPopular = POPULAR.filter((s) => s.toLowerCase().includes(term));
-  const fromProducts = products
+  const fromProducts = productList
     .map((p) => p.name.toLowerCase())
     .filter((n) => n.includes(term))
     .slice(0, 5);
-  const fromBrands = products
+  const fromBrands = productList
     .map((p) => p.brand)
     .filter((b, i, arr) => arr.indexOf(b) === i && b.toLowerCase().includes(term));
   return Array.from(new Set([...fromPopular, ...fromBrands, ...fromProducts])).slice(0, 8);

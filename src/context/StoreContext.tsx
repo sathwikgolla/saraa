@@ -17,6 +17,8 @@ import type {
   CartItem,
   MockUser,
   Order,
+  Product,
+  ProductVariant,
   QAItem,
   ReturnRecord,
   Review,
@@ -24,6 +26,8 @@ import type {
   Toast,
   User,
 } from "@/lib/types";
+import type { StockChangeType } from "@/lib/adminTypes";
+import { products as INITIAL_PRODUCTS } from "@/data/products";
 import { mockHash, uid } from "@/lib/utils";
 
 interface StoreValue {
@@ -35,6 +39,23 @@ interface StoreValue {
   user: User | null;
   addresses: Address[];
   hydrated: boolean;
+
+  // Products & Unified Inventory
+  products: Product[];
+  saveProduct: (product: Partial<Product>) => Product;
+  deleteProduct: (productId: string) => void;
+  toggleProductStatus: (productId: string) => void;
+  adjustStock: (
+    productId: string,
+    variantSku: string,
+    change: number,
+    type: StockChangeType,
+    reason: string
+  ) => void;
+  bulkUpdateStock: (rows: { sku: string; stock: number }[]) => { updated: number; errors: string[] };
+  resetProducts: () => void;
+  getProductById: (id: string) => Product | undefined;
+  getProductBySlug: (slug: string) => Product | undefined;
 
   // Extended
   recentlyViewed: string[];
@@ -154,13 +175,19 @@ function stripHash(user: MockUser): User {
 }
 
 const SEED_NOTIFICATIONS: AppNotification[] = [
-  { id: "n1", type: "offer", title: "Weekend Sale is live!", message: "Up to 50% off on fashion, electronics and more. Shop the flash sale now.", time: "2h ago", read: false },
-  { id: "n2", type: "stock", title: "Back in stock", message: "Aura Wireless Headphones you were watching are back in stock.", time: "1d ago", read: false },
-  { id: "n3", type: "price", title: "Price dropped", message: "The price of Pulse True Wireless Earbuds dropped by ₹200.", time: "2d ago", read: true },
+  { id: "n1", type: "offer", title: "Weekend Sale is live!", message: "Up to 50% off on fashion, clothing and footwear. Shop now.", time: "2h ago", read: false },
+  { id: "n2", type: "stock", title: "Back in stock", message: "White Leather Minimalist Sneakers are back in stock.", time: "1d ago", read: false },
+  { id: "n3", type: "price", title: "Price dropped", message: "The price of Men's Oxford Cotton Shirt dropped by ₹200.", time: "2d ago", read: true },
   { id: "n4", type: "delivery", title: "Delivery update", message: "Your recent order is out for delivery and arriving today.", time: "3d ago", read: true },
 ];
 
 export function StoreProvider({ children }: { children: ReactNode }) {
+  // Shared authoritative products state
+  const [products, setProducts, productsHydrated] = useStoredState<Product[]>(
+    "miracle:products",
+    INITIAL_PRODUCTS
+  );
+
   const [cart, setCart, cartHydrated] = useStoredState<CartItem[]>("saara:cart", []);
   const [wishlist, setWishlist, wishHydrated] = useStoredState<string[]>("saara:wishlist", []);
   const [orders, setOrders, ordersHydrated] = useStoredState<Order[]>("saara:orders", []);
@@ -179,6 +206,47 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme, themeHydrated] = useStoredState<Theme>("saara:theme", "light");
   const [toasts, setToasts] = useState<Toast[]>([]);
 
+  // Sanitize stored products to ensure ONLY clothing and footwear exist and seed latest demo catalog if outdated
+  useEffect(() => {
+    try {
+      const existing = localStorage.getItem("miracle:products");
+      if (existing) {
+        const parsed = JSON.parse(existing);
+        if (Array.isArray(parsed)) {
+          const hasInvalidCategories = parsed.some(
+            (p: any) => p.categoryId !== "clothing" && p.categoryId !== "footwear"
+          );
+          if (hasInvalidCategories || parsed.length < 40) {
+            // Retain any custom products added by Admin that belong to clothing or footwear
+            const validCustom = parsed.filter(
+              (p: any) =>
+                (p.categoryId === "clothing" || p.categoryId === "footwear") &&
+                !INITIAL_PRODUCTS.some((ip) => ip.id === p.id)
+            );
+            const merged = [...INITIAL_PRODUCTS, ...validCustom];
+            localStorage.setItem("miracle:products", JSON.stringify(merged));
+            setProducts(merged);
+          }
+        }
+      }
+      // Remove deprecated admin key to prevent stale split state
+      localStorage.removeItem("miracle:admin:products");
+    } catch {}
+  }, [setProducts]);
+
+  // Sync across browser tabs/windows automatically
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "miracle:products" && e.newValue) {
+        try {
+          setProducts(JSON.parse(e.newValue));
+        } catch {}
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, [setProducts]);
+
   const toast = useCallback((message: string, type: Toast["type"] = "success") => {
     const id = uid();
     setToasts((t) => [...t, { id, message, type }]);
@@ -193,6 +261,204 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     root.classList.toggle("dark", theme === "dark");
     root.style.colorScheme = theme;
   }, [theme]);
+
+  // ------------------ Product Management (Unified Source) ------------------
+  const saveProduct = useCallback(
+    (patch: Partial<Product>): Product => {
+      const now = new Date().toISOString();
+      let savedProduct: Product;
+      setProducts((prev) => {
+        if (patch.id && prev.some((p) => p.id === patch.id)) {
+          return prev.map((p) => {
+            if (p.id === patch.id) {
+              savedProduct = {
+                ...p,
+                ...patch,
+                updatedAt: now,
+                stock: patch.variants
+                  ? patch.variants.reduce((acc, v) => acc + v.stock, 0)
+                  : patch.stock !== undefined
+                  ? patch.stock
+                  : p.stock,
+              } as Product;
+              return savedProduct;
+            }
+            return p;
+          });
+        } else {
+          const newId = patch.id || "mc_prd_" + Math.random().toString(36).slice(2, 8);
+          const name = patch.name || "Untitled Product";
+          const catId = patch.categoryId === "footwear" ? "footwear" : "clothing";
+          const variants =
+            patch.variants && patch.variants.length > 0
+              ? patch.variants
+              : [
+                  {
+                    id: "var_" + Math.random().toString(36).slice(2, 7),
+                    sku: `MC-${name.slice(0, 4).toUpperCase().replace(/[^A-Z]/g, "P")}-${catId === "footwear" ? "42" : "M"}`,
+                    size: catId === "footwear" ? "42" : "M",
+                    color: (patch.colors && patch.colors[0]) || "Default",
+                    stock: 20,
+                    reservedStock: 0,
+                  },
+                ];
+          savedProduct = {
+            id: newId,
+            slug:
+              patch.slug ||
+              name
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, "-")
+                .replace(/(^-|-$)+/g, "") ||
+              `product-${newId}`,
+            name,
+            brand: patch.brand || "Miracle Collections",
+            categoryId: catId,
+            subCategory: patch.subCategory || (catId === "footwear" ? "Sneakers" : "Shirts"),
+            price: Number(patch.price) || 999,
+            mrp: Number(patch.mrp) || 1999,
+            costPrice: Number(patch.costPrice) || 450,
+            rating: patch.rating || 5.0,
+            reviews: patch.reviews || 0,
+            images:
+              patch.images && patch.images.length > 0
+                ? patch.images
+                : [
+                    catId === "footwear"
+                      ? "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=800&q=80"
+                      : "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=800&q=80",
+                  ],
+            colors: patch.colors && patch.colors.length > 0 ? patch.colors : ["Default"],
+            sizes:
+              patch.sizes && patch.sizes.length > 0
+                ? patch.sizes
+                : catId === "footwear"
+                ? ["39", "40", "41", "42", "43", "44"]
+                : ["S", "M", "L", "XL", "XXL"],
+            badges: patch.badges && patch.badges.length > 0 ? patch.badges : ["New"],
+            description: patch.description || "",
+            specifications:
+              patch.specifications && patch.specifications.length > 0
+                ? patch.specifications
+                : [{ label: "Origin", value: "India" }],
+            reviewsList: patch.reviewsList || [],
+            variants,
+            stock: variants.reduce((acc, v) => acc + v.stock, 0),
+            status: patch.status || "live",
+            createdAt: now,
+            updatedAt: now,
+          };
+          return [savedProduct, ...prev];
+        }
+      });
+      return savedProduct!;
+    },
+    [setProducts]
+  );
+
+  const deleteProduct = useCallback(
+    (productId: string) => {
+      setProducts((prev) => prev.filter((p) => p.id !== productId));
+    },
+    [setProducts]
+  );
+
+  const toggleProductStatus = useCallback(
+    (productId: string) => {
+      setProducts((prev) =>
+        prev.map((p) => {
+          if (p.id === productId) {
+            return { ...p, status: p.status === "live" ? "draft" : "live" };
+          }
+          return p;
+        })
+      );
+    },
+    [setProducts]
+  );
+
+  const adjustStock = useCallback(
+    (
+      productId: string,
+      variantSku: string,
+      change: number,
+      _type: StockChangeType,
+      _reason: string
+    ) => {
+      setProducts((prev) =>
+        prev.map((p) => {
+          if (p.id === productId) {
+            const updatedVariants = (p.variants || []).map((v) => {
+              if (v.sku === variantSku) {
+                return { ...v, stock: Math.max(0, v.stock + change) };
+              }
+              return v;
+            });
+            const totalStock = updatedVariants.reduce((s, v) => s + v.stock, 0);
+            return { ...p, variants: updatedVariants, stock: totalStock };
+          }
+          return p;
+        })
+      );
+    },
+    [setProducts]
+  );
+
+  const bulkUpdateStock = useCallback(
+    (rows: { sku: string; stock: number }[]) => {
+      let updatedCount = 0;
+      const errors: string[] = [];
+      setProducts((prev) =>
+        prev.map((p) => {
+          let modified = false;
+          const updatedVariants = (p.variants || []).map((v) => {
+            const match = rows.find(
+              (r) => r.sku.trim().toUpperCase() === v.sku.trim().toUpperCase()
+            );
+            if (match && !isNaN(match.stock) && match.stock >= 0) {
+              if (match.stock !== v.stock) {
+                updatedCount++;
+                modified = true;
+                return { ...v, stock: match.stock };
+              }
+            }
+            return v;
+          });
+          if (modified) {
+            return {
+              ...p,
+              variants: updatedVariants,
+              stock: updatedVariants.reduce((s, x) => s + x.stock, 0),
+            };
+          }
+          return p;
+        })
+      );
+      return { updated: updatedCount, errors };
+    },
+    [setProducts]
+  );
+
+  const resetProducts = useCallback(() => {
+    setProducts(INITIAL_PRODUCTS);
+    try {
+      localStorage.setItem("miracle:products", JSON.stringify(INITIAL_PRODUCTS));
+    } catch {}
+  }, [setProducts]);
+
+  const getProductById = useCallback(
+    (id: string) => {
+      return products.find((p) => p.id === id);
+    },
+    [products]
+  );
+
+  const getProductBySlug = useCallback(
+    (slug: string) => {
+      return products.find((p) => p.slug === slug || p.id === slug);
+    },
+    [products]
+  );
 
   // ------------------ Auth ------------------
   const login = useCallback(
@@ -460,6 +726,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       toasts,
       user,
       addresses,
+      products,
+      saveProduct,
+      deleteProduct,
+      toggleProductStatus,
+      adjustStock,
+      bulkUpdateStock,
+      resetProducts,
+      getProductById,
+      getProductBySlug,
       recentlyViewed,
       notifyList,
       priceAlerts,
@@ -471,7 +746,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       returns,
       theme,
       hydrated:
-        cartHydrated && wishHydrated && ordersHydrated && userHydrated && usersHydrated &&
+        productsHydrated && cartHydrated && wishHydrated && ordersHydrated && userHydrated && usersHydrated &&
         addressesHydrated && rvHydrated && notifyHydrated && paHydrated && notifHydrated &&
         urHydrated && qHydrated && rsHydrated && compareHydrated && returnsHydrated && themeHydrated,
       login,
@@ -510,10 +785,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       toast,
     }),
     [
-      cart, wishlist, orders, toasts, user, addresses,
+      cart, wishlist, orders, toasts, user, addresses, products,
+      saveProduct, deleteProduct, toggleProductStatus, adjustStock, bulkUpdateStock, resetProducts, getProductById, getProductBySlug,
       recentlyViewed, notifyList, priceAlerts, notifications, userReviews, questions,
       recentSearches, compare, returns, theme,
-      cartHydrated, wishHydrated, ordersHydrated, userHydrated, usersHydrated,
+      productsHydrated, cartHydrated, wishHydrated, ordersHydrated, userHydrated, usersHydrated,
       addressesHydrated, rvHydrated, notifyHydrated, paHydrated, notifHydrated,
       urHydrated, qHydrated, rsHydrated, compareHydrated, returnsHydrated, themeHydrated,
       login, register, logout, updateProfile,

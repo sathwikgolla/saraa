@@ -23,7 +23,7 @@ import { DELIVERY_CHARGE, FREE_DELIVERY_THRESHOLD } from "@/data/products";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { Button } from "@/components/ui/Button";
 import type { Address, PaymentStatus } from "@/lib/types";
-import { cn, formatPrice } from "@/lib/utils";
+import { cn, formatPrice, handleImageError } from "@/lib/utils";
 
 type PaymentMethod = "upi" | "card" | "netbanking" | "cod";
 type Step = 0 | 1 | 2;
@@ -354,7 +354,7 @@ function CheckoutInner() {
                 {items.map(({ item, product }) => (
                   <div key={item.key} className="flex items-center gap-3">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={product!.images[0]} alt={product!.name} className="h-14 w-14 rounded object-cover" />
+                    <img src={product!.images[0]} alt={product!.name} onError={handleImageError} className="h-14 w-14 rounded object-cover" />
                     <div className="min-w-0 flex-1">
                       <p className="line-clamp-1 text-sm font-semibold text-black">{product!.name}</p>
                       <p className="text-xs text-neutral-500">

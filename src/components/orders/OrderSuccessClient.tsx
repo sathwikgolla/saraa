@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Calendar, CheckCircle2, CreditCard, MapPin } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { Button } from "@/components/ui/Button";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, handleImageError } from "@/lib/utils";
 
 export function OrderSuccessClient() {
   const sp = useSearchParams();
@@ -74,7 +74,7 @@ export function OrderSuccessClient() {
             {order?.items.map((item) => (
               <div key={item.productId + item.size + item.color} className="flex items-center gap-3 px-4 py-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={item.image} alt={item.name} className="h-14 w-14 rounded border border-neutral-100 object-cover" />
+                <img src={item.image} alt={item.name} onError={handleImageError} className="h-14 w-14 rounded border border-neutral-100 object-cover" />
                 <div className="min-w-0 flex-1">
                   <p className="line-clamp-1 text-sm font-semibold text-black">{item.name}</p>
                   <p className="text-xs text-neutral-500">Qty {item.qty}</p>

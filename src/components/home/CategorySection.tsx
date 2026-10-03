@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
-import { ArrowRight, Layers } from "lucide-react";
+import { ArrowRight, Layers, Sparkles } from "lucide-react";
 import { categories } from "@/data/categories";
+import { handleImageError } from "@/lib/utils";
 
 const CORE_CATEGORIES = [
   {
@@ -38,6 +41,10 @@ const CORE_CATEGORIES = [
 ];
 
 export function CategorySection() {
+  const secondaryCategories = categories.filter(
+    (c) => !["women", "men", "kids", "footwear"].includes(c.id)
+  );
+
   return (
     <section id="categories" className="mx-auto max-w-7xl px-4 pt-10 sm:px-6">
       <div className="mb-6 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
@@ -54,7 +61,7 @@ export function CategorySection() {
             Shop By Category
           </h2>
           <p className="mt-1 text-xs text-neutral-500 sm:text-sm">
-            Handcrafted apparel and footwear thoughtfully designed for every member of your family
+            Handcrafted apparel, footwear and essentials thoughtfully designed for every member of your family
           </p>
         </div>
         <Link
@@ -81,6 +88,7 @@ export function CategorySection() {
                 alt={cat.name}
                 loading="lazy"
                 decoding="async"
+                onError={handleImageError}
                 className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-108"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
@@ -128,25 +136,56 @@ export function CategorySection() {
         ))}
       </div>
 
-      {/* Secondary Quick-Access Categories Bar */}
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3">
-        <span className="text-xs font-bold text-neutral-600">
-          Also exploring:
-        </span>
-        <div className="flex flex-wrap gap-2">
-          {categories
-            .filter((c) => !["women", "men", "kids", "footwear"].includes(c.id))
-            .map((c) => (
+      {/* Secondary Lifestyle & Home Categories with Demo Images */}
+      {secondaryCategories.length > 0 && (
+        <div className="mt-6 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 sm:p-5">
+          <div className="mb-3.5 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles size={14} className="text-neutral-700" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-700">
+                Explore More Departments
+              </h3>
+            </div>
+            <Link
+              href="/products"
+              className="text-xs font-semibold text-neutral-600 hover:text-black hover:underline"
+            >
+              See All Collections →
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {secondaryCategories.map((c) => (
               <Link
                 key={c.id}
                 href={`/products?category=${c.id}`}
-                className="rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-medium text-neutral-700 transition-colors hover:border-black hover:text-black"
+                className="group relative flex items-center gap-3 overflow-hidden rounded-xl border border-neutral-200 bg-white p-2.5 transition-all hover:border-black/30 hover:shadow-sm"
               >
-                {c.name}
+                <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-neutral-100">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={c.image}
+                    alt={c.name}
+                    loading="lazy"
+                    decoding="async"
+                    onError={handleImageError}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h4 className="truncate text-xs font-bold text-black group-hover:underline">
+                    {c.name}
+                  </h4>
+                  <p className="line-clamp-1 text-[11px] text-neutral-500">
+                    {c.description}
+                  </p>
+                </div>
               </Link>
             ))}
+          </div>
         </div>
-      </div>
+      )}
     </section>
   );
 }
+

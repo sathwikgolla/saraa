@@ -8,7 +8,7 @@ import { useStore } from "@/context/StoreContext";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { TrackingTimeline } from "@/components/orders/TrackingTimeline";
-import { cn, formatPrice } from "@/lib/utils";
+import { cn, formatPrice, handleImageError } from "@/lib/utils";
 
 const STATUS_STYLES: Record<Order["status"], string> = {
   Confirmed: "bg-blue-50 text-blue-700 border-blue-200",
@@ -90,7 +90,7 @@ export function OrderCard({ order }: { order: Order }) {
         {order.items.map((item) => (
           <div key={item.productId + item.size + item.color} className="flex items-center gap-3 px-4 py-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={item.image} alt={item.name} className="h-16 w-16 rounded border border-neutral-100 object-cover" />
+            <img src={item.image} alt={item.name} onError={handleImageError} className="h-16 w-16 rounded border border-neutral-100 object-cover" />
             <div className="min-w-0 flex-1">
               <p className="line-clamp-1 text-sm font-semibold text-black">{item.name}</p>
               <p className="text-xs text-neutral-500">

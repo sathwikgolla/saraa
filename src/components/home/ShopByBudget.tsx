@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowRight, Wallet } from "lucide-react";
+import { handleImageError } from "@/lib/utils";
 
 const BUDGET_TIERS = [
   {
@@ -8,6 +11,7 @@ const BUDGET_TIERS = [
     href: "/products?maxPrice=499",
     badge: "Budget Friendly",
     popular: "Pure Cotton Tees, UV Shades",
+    image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=400&q=80",
   },
   {
     label: "Under ₹999",
@@ -15,6 +19,7 @@ const BUDGET_TIERS = [
     href: "/products?maxPrice=999",
     badge: "Sweet Spot",
     popular: "Anarkali Sets, Wedge Sandals",
+    image: "https://images.unsplash.com/photo-1566206091558-7f218b696731?auto=format&fit=crop&w=400&q=80",
   },
   {
     label: "Under ₹1,499",
@@ -22,6 +27,7 @@ const BUDGET_TIERS = [
     href: "/products?maxPrice=1499",
     badge: "Most Popular",
     popular: "Denim Outerwear, Walk Sneakers",
+    image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=400&q=80",
   },
   {
     label: "Under ₹2,499",
@@ -29,6 +35,7 @@ const BUDGET_TIERS = [
     href: "/products?maxPrice=2499",
     badge: "Premium Finds",
     popular: "Street Boots, Leather Bags",
+    image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=400&q=80",
   },
 ];
 
@@ -65,7 +72,7 @@ export function ShopByBudget() {
           <Link
             key={tier.label}
             href={tier.href}
-            className="group flex flex-col justify-between rounded-2xl border border-neutral-200 bg-white p-5 transition-all duration-200 hover:-translate-y-1 hover:border-black/30 hover:shadow-md"
+            className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-neutral-200 bg-white p-5 transition-all duration-200 hover:-translate-y-1 hover:border-black/30 hover:shadow-md"
           >
             <div>
               <div className="flex items-center justify-between">
@@ -77,12 +84,27 @@ export function ShopByBudget() {
                 </span>
               </div>
 
-              <h3 className="mt-3 text-2xl font-black tracking-tight text-black">
-                {tier.label}
-              </h3>
-              <p className="mt-1 text-xs leading-relaxed text-neutral-500">
-                {tier.description}
-              </p>
+              <div className="mt-4 flex items-center gap-4">
+                <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-neutral-100 bg-neutral-100 shadow-2xs">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={tier.image}
+                    alt={tier.label}
+                    loading="lazy"
+                    decoding="async"
+                    onError={handleImageError}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+                  />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black tracking-tight text-black">
+                    {tier.label}
+                  </h3>
+                  <p className="line-clamp-2 text-xs leading-relaxed text-neutral-500">
+                    {tier.description}
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="mt-4 border-t border-neutral-100 pt-3">
@@ -96,3 +118,4 @@ export function ShopByBudget() {
     </section>
   );
 }
+

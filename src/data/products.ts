@@ -354,7 +354,7 @@ export const products: Product[] = [
     rating: 4.4,
     reviews: 1980,
     images: [
-      img("photo-1584990347449-a5d1f4c5c0b0"),
+      img("photo-1584269600464-37b1b58a9fe7"),
       img("photo-1556911220-bff31c812dba"),
     ],
     colors: ["Grey", "Teal"],
@@ -382,7 +382,7 @@ export const products: Product[] = [
     rating: 4.3,
     reviews: 1540,
     images: [
-      img("photo-1616627983959-7fa7a45c4064"),
+      img("photo-1522771739844-6a9f6d5f14af"),
       img("photo-1505693416388-ac5ce068fe85"),
     ],
     colors: ["Grey", "Beige", "Blue"],
@@ -602,7 +602,7 @@ export const products: Product[] = [
     reviews: 620,
     images: [
       img("photo-1596462502278-27bfdc403348"),
-      img("photo-1585231054650-2cbbfda46e90"),
+      img("photo-1522335789203-aabd1fc54bc9"),
     ],
     colors: ["Fair", "Medium", "Deep"],
     sizes: [],

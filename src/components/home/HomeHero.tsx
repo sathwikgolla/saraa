@@ -1,5 +1,39 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowRight, Sparkles, Tag, ShieldCheck, Truck, RefreshCw } from "lucide-react";
+import { handleImageError } from "@/lib/utils";
+
+const HERO_TILES = [
+  {
+    title: "Women's Fashion",
+    image: "https://images.unsplash.com/photo-1566206091558-7f218b696731?auto=format&fit=crop&w=600&q=80",
+    href: "/products?category=women",
+    badge: "Kurtas & Dresses",
+    tall: true,
+  },
+  {
+    title: "Footwear Collection",
+    image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80",
+    href: "/products?category=footwear",
+    badge: "Sneakers & Flats",
+    tall: false,
+  },
+  {
+    title: "Men's Apparel",
+    image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80",
+    href: "/products?category=men",
+    badge: "Denims & Tees",
+    tall: false,
+  },
+  {
+    title: "Kids' Collection",
+    image: "https://images.unsplash.com/photo-1519457431-44ccd64a579b?auto=format&fit=crop&w=600&q=80",
+    href: "/products?category=kids",
+    badge: "Festive & Casual",
+    tall: true,
+  },
+];
 
 export function HomeHero() {
   return (
@@ -49,6 +83,42 @@ export function HomeHero() {
               </a>
             </div>
 
+            {/* Mobile / Tablet Visual Demo Image Strip (Visible < lg) */}
+            <div className="mt-8 block lg:hidden">
+              <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                Trending Departments
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {HERO_TILES.map((tile) => (
+                  <Link
+                    key={tile.title}
+                    href={tile.href}
+                    className="group relative flex flex-col overflow-hidden rounded-xl border border-white/10 bg-white/5 p-2 transition-all hover:bg-white/15"
+                  >
+                    <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-neutral-800">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={tile.image}
+                        alt={tile.title}
+                        loading="eager"
+                        decoding="async"
+                        onError={handleImageError}
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    </div>
+                    <div className="mt-2">
+                      <p className="truncate text-xs font-bold text-white group-hover:underline">
+                        {tile.title}
+                      </p>
+                      <p className="truncate text-[10px] text-neutral-400">
+                        {tile.badge}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
             {/* Category Quick Badges */}
             <div className="mt-8 border-t border-white/10 pt-5">
               <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
@@ -73,52 +143,56 @@ export function HomeHero() {
             </div>
           </div>
 
-          {/* Right Image Collage */}
+          {/* Right Image Collage (Desktop lg: and up) */}
           <div className="relative hidden h-full min-h-[460px] lg:col-span-5 lg:block">
             <div className="grid h-full grid-cols-2 gap-2 p-4">
               <div className="space-y-2">
-                <div className="overflow-hidden rounded-xl bg-neutral-800">
+                <Link href="/products?category=women" className="group block overflow-hidden rounded-xl bg-neutral-800">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src="https://images.unsplash.com/photo-1566206091558-7f218b696731?auto=format&fit=crop&w=600&q=80"
                     alt="Women's Fashion"
-                    loading="lazy"
+                    loading="eager"
                     decoding="async"
-                    className="h-56 w-full object-cover transition-transform duration-500 hover:scale-105"
+                    onError={handleImageError}
+                    className="h-56 w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
-                </div>
-                <div className="overflow-hidden rounded-xl bg-neutral-800">
+                </Link>
+                <Link href="/products?category=footwear" className="group block overflow-hidden rounded-xl bg-neutral-800">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80"
                     alt="Footwear Collection"
                     loading="lazy"
                     decoding="async"
-                    className="h-44 w-full object-cover transition-transform duration-500 hover:scale-105"
+                    onError={handleImageError}
+                    className="h-44 w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
-                </div>
+                </Link>
               </div>
               <div className="space-y-2 pt-6">
-                <div className="overflow-hidden rounded-xl bg-neutral-800">
+                <Link href="/products?category=men" className="group block overflow-hidden rounded-xl bg-neutral-800">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80"
                     alt="Men's Apparel"
                     loading="lazy"
                     decoding="async"
-                    className="h-44 w-full object-cover transition-transform duration-500 hover:scale-105"
+                    onError={handleImageError}
+                    className="h-44 w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
-                </div>
-                <div className="overflow-hidden rounded-xl bg-neutral-800">
+                </Link>
+                <Link href="/products?category=kids" className="group block overflow-hidden rounded-xl bg-neutral-800">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src="https://images.unsplash.com/photo-1519457431-44ccd64a579b?auto=format&fit=crop&w=600&q=80"
                     alt="Kids' Collection"
                     loading="lazy"
                     decoding="async"
-                    className="h-56 w-full object-cover transition-transform duration-500 hover:scale-105"
+                    onError={handleImageError}
+                    className="h-56 w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
-                </div>
+                </Link>
               </div>
             </div>
 
@@ -138,3 +212,4 @@ export function HomeHero() {
     </section>
   );
 }
+

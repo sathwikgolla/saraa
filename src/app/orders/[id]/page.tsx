@@ -13,7 +13,7 @@ import {
 import { useStore } from "@/context/StoreContext";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { Button } from "@/components/ui/Button";
-import { cn, formatPrice } from "@/lib/utils";
+import { cn, formatPrice, handleImageError } from "@/lib/utils";
 
 const STEPS: { key: string; label: string; icon: typeof Package }[] = [
   { key: "Confirmed", label: "Order Confirmed", icon: CheckCircle2 },
@@ -125,6 +125,7 @@ export default function OrderDetailPage() {
                     <img
                       src={item.image}
                       alt={item.name}
+                      onError={handleImageError}
                       className="h-16 w-16 rounded border border-neutral-100 object-cover"
                     />
                     <div className="min-w-0 flex-1">

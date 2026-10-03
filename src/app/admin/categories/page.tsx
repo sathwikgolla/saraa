@@ -12,6 +12,7 @@ import {
 import { useAdmin } from "@/context/AdminContext";
 import type { AdminCategory, CategoryFilter } from "@/lib/adminTypes";
 import { FilterEditorModal } from "@/components/admin/FilterEditorModal";
+import { handleImageError } from "@/lib/utils";
 
 export default function AdminCategoriesPage() {
   const {
@@ -126,9 +127,11 @@ export default function AdminCategoriesPage() {
               className="rounded-xl border border-neutral-200 bg-white overflow-hidden shadow-sm group hover:border-neutral-400 transition flex flex-col justify-between"
             >
               <div className="h-32 relative bg-neutral-100">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={c.image}
                   alt={c.name}
+                  onError={handleImageError}
                   className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />

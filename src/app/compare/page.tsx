@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Rating } from "@/components/ui/Rating";
 import { PriceDisplay } from "@/components/ui/PriceDisplay";
 import { StockBadge } from "@/components/product/StockBadge";
-import { discountPercent } from "@/lib/utils";
+import { discountPercent, handleImageError } from "@/lib/utils";
 
 export default function ComparePage() {
   const { compare, toggleCompare, clearCompare, addToCart, toast, hydrated } = useStore();
@@ -75,7 +75,7 @@ export default function ComparePage() {
                   <div className="relative">
                     <Link href={`/products/${p.slug}`}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={p.images[0]} alt={p.name} className="h-28 w-28 rounded-lg border border-neutral-100 object-cover" />
+                      <img src={p.images[0]} alt={p.name} onError={handleImageError} className="h-28 w-28 rounded-lg border border-neutral-100 object-cover" />
                     </Link>
                     <button
                       onClick={() => toggleCompare(p.id)}

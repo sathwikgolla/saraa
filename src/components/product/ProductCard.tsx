@@ -73,9 +73,9 @@ export function ProductCard({ product, showAddToCart = true, className }: Produc
 
           {/* Top-left badges */}
           <div className="absolute left-2 top-2 flex flex-col items-start gap-1">
-            {badges.map((b) => (
+            {badges.map((b, index) => (
               <span
-                key={b.text}
+                key={`${b.text}-${index}`}
                 className={cn("rounded px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide", b.cls)}
               >
                 {b.text}

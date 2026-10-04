@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Bell, BellOff, CheckCheck, Truck, Package, Tag, Percent, ArrowDown, PackageCheck } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { cn } from "@/lib/utils";
@@ -80,7 +81,13 @@ export function NotificationsPanel() {
 
 export function NotificationBellIcon({ className }: { className?: string }) {
   const { notifications } = useStore();
-  const unread = notifications.filter((n) => !n.read).length;
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const unread = mounted ? notifications.filter((n) => !n.read).length : 0;
   return (
     <span className={cn("relative", className)}>
       <Bell size={22} />

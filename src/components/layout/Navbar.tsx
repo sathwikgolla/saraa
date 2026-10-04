@@ -37,11 +37,19 @@ export function Navbar() {
   const [catOpen, setCatOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const catRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
-  const cartCount = cart.reduce((n, i) => n + i.qty, 0);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const cartCount = mounted ? cart.reduce((n, i) => n + i.qty, 0) : 0;
+  const wishlistCount = mounted ? wishlist.length : 0;
+  const compareCount = mounted ? compare.length : 0;
+  const currentUser = mounted ? user : null;
 
   useEffect(() => {
     setMenuOpen(false);
@@ -149,10 +157,9 @@ export function Navbar() {
             <button
               onClick={toggleTheme}
               aria-label="Toggle theme"
-              suppressHydrationWarning
               className="flex h-11 items-center justify-center rounded-md px-2 text-neutral-600 hover:bg-neutral-100 hover:text-black"
             >
-              {hydrated && theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+              {mounted && theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
             </button>
 
             {/* Notifications */}
@@ -175,30 +182,30 @@ export function Navbar() {
             <Link href="/compare" className={cn(iconBtn, "hidden sm:flex")}>
               <span className="relative">
                 <GitCompareArrows size={22} />
-                {compare.length > 0 && <span className={badge}>{compare.length}</span>}
+                {compareCount > 0 && <span className={badge}>{compareCount}</span>}
               </span>
               <span className="text-[11px] font-medium">Compare</span>
             </Link>
 
             {/* Login / user */}
             <div className="relative hidden lg:block" ref={userRef}>
-              {user ? (
+              {currentUser ? (
                 <>
                   <button
                     onClick={() => setUserOpen((o) => !o)}
                     className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold text-black hover:bg-neutral-100"
                   >
                     <span className="flex h-7 w-7 items-center justify-center rounded-full bg-black text-xs font-bold text-white">
-                      {user.name.charAt(0).toUpperCase()}
+                      {currentUser.name.charAt(0).toUpperCase()}
                     </span>
-                    Hi, {user.name.split(" ")[0]}
+                    Hi, {currentUser.name.split(" ")[0]}
                     <ChevronDown size={14} className="text-neutral-400" />
                   </button>
                   {userOpen && (
                     <div className="absolute right-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-md border border-neutral-200 bg-white py-1 shadow-lg">
                       <div className="border-b border-neutral-100 px-4 py-3">
-                        <p className="text-sm font-semibold text-black">{user.name}</p>
-                        <p className="text-xs text-neutral-500">{user.email}</p>
+                        <p className="text-sm font-semibold text-black">{currentUser.name}</p>
+                        <p className="text-xs text-neutral-500">{currentUser.email}</p>
                       </div>
                       <Link
                         href="/profile"
@@ -254,7 +261,7 @@ export function Navbar() {
             <Link href="/wishlist" className={cn(iconBtn, "hidden sm:flex")}>
               <span className="relative">
                 <Heart size={22} />
-                {wishlist.length > 0 && <span className={badge}>{wishlist.length}</span>}
+                {wishlistCount > 0 && <span className={badge}>{wishlistCount}</span>}
               </span>
               <span className="text-[11px] font-medium">Wishlist</span>
             </Link>
@@ -325,14 +332,14 @@ export function Navbar() {
               </button>
             </div>
 
-            {user && (
+            {currentUser && (
               <div className="flex items-center gap-3 border-b border-neutral-200 bg-neutral-50 px-4 py-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black text-sm font-bold text-white">
-                  {user.name.charAt(0).toUpperCase()}
+                  {currentUser.name.charAt(0).toUpperCase()}
                 </span>
                 <div>
-                  <p className="text-sm font-bold text-black">{user.name}</p>
-                  <span className="text-xs text-neutral-500">{user.email}</span>
+                  <p className="text-sm font-bold text-black">{currentUser.name}</p>
+                  <span className="text-xs text-neutral-500">{currentUser.email}</span>
                 </div>
               </div>
             )}
@@ -385,16 +392,16 @@ export function Navbar() {
                 className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50"
               >
                 <GitCompareArrows size={18} className="text-neutral-400" /> Compare
-                {compare.length > 0 && (
+                {compareCount > 0 && (
                   <span className="ml-auto rounded-full bg-black px-2 py-0.5 text-[10px] font-bold text-white">
-                    {compare.length}
+                    {compareCount}
                   </span>
                 )}
               </Link>
             </nav>
 
             <div className="border-t border-neutral-200 p-4">
-              {user ? (
+              {currentUser ? (
                 <button
                   onClick={() => {
                     logout();

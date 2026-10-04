@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Heart, Home, LayoutGrid, ShoppingCart, User } from "lucide-react";
@@ -10,12 +11,19 @@ export function MobileNav() {
   const pathname = usePathname();
   if (pathname?.startsWith("/admin")) return null;
   const { cart, wishlist, user } = useStore();
-  const cartCount = cart.reduce((n, i) => n + i.qty, 0);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const cartCount = mounted ? cart.reduce((n, i) => n + i.qty, 0) : 0;
+  const wishlistCount = mounted ? wishlist.length : 0;
 
   const items = [
     { href: "/", label: "Home", icon: Home },
     { href: "/products", label: "Categories", icon: LayoutGrid },
-    { href: "/wishlist", label: "Wishlist", icon: Heart, badge: wishlist.length },
+    { href: "/wishlist", label: "Wishlist", icon: Heart, badge: wishlistCount },
     { href: "/cart", label: "Cart", icon: ShoppingCart, badge: cartCount },
     { href: "/profile", label: "Profile", icon: User },
   ];

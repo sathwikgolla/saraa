@@ -32,6 +32,8 @@ export interface AdminProduct {
   brand: string;
   categoryId: string;
   subCategory?: string;
+  /** Audience the product belongs to (men/women/kids); drives the category hierarchy. */
+  gender?: "men" | "women" | "kids" | "unisex" | "";
   price: number;
   mrp: number;
   costPrice?: number;
@@ -161,8 +163,20 @@ export interface AdminCategory {
   slug: string;
   image: string;
   description: string;
+  /** @deprecated Superseded by the `subcategories` table (category → gender → subcategory). Kept only for backwards compatibility. */
   subcategories: string[];
   productCount: number;
+  active: boolean;
+}
+
+/** A third-level catalog node: a subcategory scoped to one category + audience. */
+export interface AdminSubcategory {
+  id: string;
+  categoryId: string;
+  gender: "men" | "women" | "kids" | "unisex";
+  name: string;
+  slug: string;
+  sortOrder: number;
   active: boolean;
 }
 

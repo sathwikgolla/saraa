@@ -3,15 +3,15 @@
 import Link from "next/link";
 import { Clock, X } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
-import { getProductById } from "@/data/products";
 import { ProductCard } from "@/components/product/ProductCard";
 import { Button } from "@/components/ui/Button";
 
 export function RecentlyViewed() {
-  const { recentlyViewed, removeRecentlyViewed } = useStore();
-  const products = recentlyViewed.map(getProductById).filter((p): p is NonNullable<typeof p> => Boolean(p));
+  const { recentlyViewed, removeRecentlyViewed, products } = useStore();
+  const getProductById = (id: string) => products.find((p: any) => p.id === id);
+  const viewedProducts = recentlyViewed.map(getProductById).filter((p): p is NonNullable<typeof p> => Boolean(p));
 
-  if (products.length === 0) return null;
+  if (viewedProducts.length === 0) return null;
 
   return (
     <section className="mx-auto max-w-7xl px-4 sm:px-6">
@@ -24,7 +24,7 @@ export function RecentlyViewed() {
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-5">
-        {products.slice(0, 10).map((p) => (
+        {viewedProducts.slice(0, 10).map((p) => (
           <div key={p.id} className="relative">
             <button
               onClick={() => removeRecentlyViewed(p.id)}

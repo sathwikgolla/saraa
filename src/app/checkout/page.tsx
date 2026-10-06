@@ -18,12 +18,13 @@ import {
   X,
 } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
-import { getProductById } from "@/data/products";
-import { DELIVERY_CHARGE, FREE_DELIVERY_THRESHOLD } from "@/data/products";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { Button } from "@/components/ui/Button";
 import type { Address, PaymentStatus } from "@/lib/types";
 import { cn, formatPrice, handleImageError } from "@/lib/utils";
+
+const DELIVERY_CHARGE = 50;
+const FREE_DELIVERY_THRESHOLD = 499;
 
 type PaymentMethod = "upi" | "card" | "netbanking" | "cod";
 type Step = 0 | 1 | 2;
@@ -69,7 +70,7 @@ const EMPTY_ADDRESS: Omit<Address, "id"> = {
 
 function CheckoutInner() {
   const router = useRouter();
-  const { cart, hydrated, addresses, addAddress, placeOrder, toast } = useStore();
+  const { cart, hydrated, addresses, addAddress, placeOrder, toast, products } = useStore();
   const [step, setStep] = useState<Step>(0);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
     addresses[0]?.id ?? null
@@ -87,6 +88,7 @@ function CheckoutInner() {
   const [bank, setBank] = useState(BANKS[0]);
   const [processing, setProcessing] = useState(false);
 
+  const getProductById = (id: string) => products.find((p: any) => p.id === id);
   const items = cart
     .map((item) => ({ item, product: getProductById(item.productId) }))
     .filter((x) => x.product);
@@ -115,7 +117,7 @@ function CheckoutInner() {
     );
   }
 
-  const saveAddress = () => {
+  const saveAddress = async () => {
     if (
       !addressForm.name.trim() ||
       !addressForm.phone.trim() ||
@@ -127,11 +129,13 @@ function CheckoutInner() {
       toast("Please complete all required address fields", "error");
       return;
     }
-    const saved = addAddress(addressForm);
-    setSelectedAddressId(saved.id);
-    setShowAddressForm(false);
-    setAddressForm(EMPTY_ADDRESS);
-    toast("Address added");
+    const saved = await addAddress(addressForm);
+    if (saved) {
+      setSelectedAddressId(saved.id);
+      setShowAddressForm(false);
+      setAddressForm(EMPTY_ADDRESS);
+      toast("Address added");
+    }
   };
 
   const applyCoupon = () => {
@@ -160,41 +164,44 @@ function CheckoutInner() {
       (payment === "card" && card.number && card.holder && card.expiry && card.cvv) ||
       (payment === "netbanking" && bank));
 
-  const placeOrderAction = () => {
+  const placeOrderAction = async () => {
     if (!selectedAddress) {
       setStep(0);
       toast("Please select a delivery address", "error");
       return;
     }
     setProcessing(true);
-    window.setTimeout(() => {
-      const paymentStatus: PaymentStatus = payment === "cod" ? "Pending" : "Paid";
-      const order = placeOrder({
-        items: items.map(({ item, product }) => ({
-          productId: product!.id,
-          name: product!.name,
-          brand: product!.brand,
-          price: product!.price,
-          qty: item.qty,
-          image: product!.images[0],
-          color: item.color,
-          size: item.size,
-        })),
-        itemTotal,
-        discount,
-        deliveryCharge,
-        coupon: appliedCoupon?.code ?? "",
-        couponDiscount,
-        total,
-        status: "Confirmed",
-        paymentStatus,
-        deliveryBy: formatDelivery(5),
-        address: formatAddress(selectedAddress),
-        paymentMethod: PAYMENT_METHODS.find((p) => p.id === payment)!.label,
-      });
+    const paymentStatus: PaymentStatus = payment === "cod" ? "Pending" : "Paid";
+    const order = await placeOrder({
+      items: items.map(({ item, product }) => ({
+        productId: product!.id,
+        name: product!.name,
+        brand: product!.brand,
+        price: product!.price,
+        qty: item.qty,
+        image: product!.images[0],
+        color: item.color,
+        size: item.size,
+      })),
+      itemTotal,
+      discount,
+      deliveryCharge,
+      coupon: appliedCoupon?.code ?? "",
+      couponDiscount,
+      total,
+      status: "Confirmed",
+      paymentStatus,
+      deliveryBy: formatDelivery(5),
+      address: formatAddress(selectedAddress),
+      paymentMethod: PAYMENT_METHODS.find((p) => p.id === payment)!.label,
+    }, selectedAddress);
+    if (order) {
       setProcessing(false);
       router.replace(`/order-success?id=${order.id}`);
-    }, 1200);
+    } else {
+      setProcessing(false);
+      toast("Failed to place order", "error");
+    }
   };
 
   const steps: { label: string }[] = [

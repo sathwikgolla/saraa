@@ -27,21 +27,32 @@ export function LoginForm({ next }: { next: string }) {
     return Object.keys(e).length === 0;
   };
 
-  const submit = (ev: React.FormEvent) => {
+  const submit = async (ev: React.FormEvent) => {
     ev.preventDefault();
     if (!validate()) return;
     setLoading(true);
-    // Simulate network latency for a realistic auth flow.
-    window.setTimeout(() => {
-      const result = login(identifier, password);
-      setLoading(false);
-      if (result.ok) {
-        toast("Logged in successfully");
-        router.push(next);
-      } else {
-        setErrors({ form: result.error });
-      }
-    }, 600);
+    const result = await login(identifier, password);
+    setLoading(false);
+    if (result.ok) {
+      // Super Admins land in the admin panel; customers land on the storefront
+      // (or the page they were originally trying to reach). Never drop an admin
+      // into the customer dashboard by default.
+      //
+      // If the user was heading to /admin (e.g. they were bounced to login from
+      // that protected route), always send them back there and let the
+      // server-side gate decide: an admin is admitted, a customer is redirected
+      // to the storefront. This keeps the destination correct even if the
+      // client-side role hint is momentarily unavailable.
+      const destination = next.startsWith("/admin")
+        ? "/admin"
+        : result.isAdmin
+        ? "/admin"
+        : next;
+      toast("Logged in successfully");
+      router.push(destination);
+    } else {
+      setErrors({ form: result.error });
+    }
   };
 
   const inputCls =

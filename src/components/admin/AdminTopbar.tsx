@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Bell,
   Check,
@@ -42,6 +43,7 @@ export function AdminTopbar({
   } = useAdmin();
 
   const { theme, toggleTheme, logout, hydrated } = useStore();
+  const router = useRouter();
 
   const [staffMenuOpen, setStaffMenuOpen] = useState(false);
   const [quickMenuOpen, setQuickMenuOpen] = useState(false);
@@ -276,9 +278,13 @@ export function AdminTopbar({
                   <ShieldCheck size={14} /> Staff & Permissions
                 </Link>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     setStaffMenuOpen(false);
-                    logout();
+                    // Clear the Supabase session, then leave the admin area so
+                    // the server gate cannot be bypassed by a client-side logout.
+                    await logout();
+                    router.replace("/");
+                    router.refresh();
                   }}
                   className="flex w-full items-center gap-2 px-3 py-2 text-neutral-700 hover:bg-neutral-100 hover:text-black rounded-md font-medium"
                 >

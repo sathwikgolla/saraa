@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
+  ChevronRight,
   GitCompareArrows,
   Heart,
   LayoutGrid,
@@ -23,27 +24,64 @@ import { Logo } from "@/components/layout/Logo";
 import { SearchBar } from "@/components/layout/SearchBar";
 import { NotificationsPanel, NotificationBellIcon } from "@/components/layout/NotificationsPanel";
 import { useStore } from "@/context/StoreContext";
-import { categories } from "@/data/categories";
+import { GENDER_OPTIONS } from "@/lib/gender";
+import type { Category, Gender } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export function Navbar() {
-  const { cart, wishlist, user, logout, compare, theme, toggleTheme, hydrated } = useStore();
+  const {
+    cart,
+    wishlist,
+    user,
+    logout,
+    compare,
+    theme,
+    toggleTheme,
+    hydrated,
+    products,
+    categories: dbCategories,
+  } = useStore();
   const pathname = usePathname();
   if (pathname?.startsWith("/admin")) return null;
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeCategory = pathname === "/products" ? searchParams.get("category") ?? "all" : "";
   const [menuOpen, setMenuOpen] = useState(false);
+  const [expandedCat, setExpandedCat] = useState<string | null>(null);
   const [catOpen, setCatOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [canHover, setCanHover] = useState(true);
   const catRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
+  // Prefer the catalog categories from the database; fall back to whatever the
+  // product set contains so the nav still works before the seed is applied.
+  const categories = useMemo<Category[]>(() => {
+    if (dbCategories && dbCategories.length > 0) return dbCategories;
+    return Array.from(new Set(products.map((p: any) => (p as any).categoryId))).map((id) => ({
+      id,
+      name: id.charAt(0).toUpperCase() + id.slice(1),
+      slug: id.toLowerCase(),
+      image: "",
+      description: "",
+    }));
+  }, [dbCategories, products]);
+
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // Pointer devices get the hover mega menu; touch devices navigate directly and
+  // use the expandable mobile drawer instead.
+  useEffect(() => {
+    const mq = window.matchMedia("(hover: hover) and (pointer: fine)");
+    setCanHover(mq.matches);
+    const onChange = () => setCanHover(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
   }, []);
 
   const cartCount = mounted ? cart.reduce((n, i) => n + i.qty, 0) : 0;
@@ -57,6 +95,10 @@ export function Navbar() {
     setUserOpen(false);
     setNotifOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!menuOpen) setExpandedCat(null);
+  }, [menuOpen]);
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -281,7 +323,13 @@ export function Navbar() {
         <SearchBar className="my-3 lg:hidden" />
 
         {/* Category nav (horizontal scroll on mobile) */}
-        <nav className="no-scrollbar -mx-4 flex items-center gap-1 overflow-x-auto px-4 py-2 sm:mx-0 sm:px-0 lg:gap-2">
+        <nav
+          className={cn(
+            "no-scrollbar -mx-4 flex items-center gap-1 px-4 py-2 sm:mx-0 sm:px-0 lg:gap-2",
+            // Keep the dropdown unclipped on hover devices; scroll horizontally on touch.
+            canHover ? "overflow-visible" : "overflow-x-auto"
+          )}
+        >
           <Link
             href="/products"
             className={cn(
@@ -293,23 +341,14 @@ export function Navbar() {
           >
             All
           </Link>
-          {categories.map((c) => {
-            const active = activeCategory === c.id;
-            return (
-              <Link
-                key={c.id}
-                href={`/products?category=${c.id}`}
-                className={cn(
-                  "relative whitespace-nowrap px-2.5 py-1.5 text-sm font-medium transition-colors",
-                  active
-                    ? "font-bold text-black after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-black"
-                    : "text-neutral-600 hover:text-black"
-                )}
-              >
-                {c.name}
-              </Link>
-            );
-          })}
+          {categories.map((c) => (
+            <CategoryNavItem
+              key={c.id}
+              category={c}
+              active={activeCategory === c.id}
+              canHover={canHover}
+            />
+          ))}
         </nav>
       </div>
 
@@ -355,16 +394,49 @@ export function Navbar() {
                 <Package size={18} className="text-neutral-400" />
                 All Products
               </Link>
-              {categories.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => goCategory(c.id)}
-                  className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50"
-                >
-                  <LayoutGrid size={18} className="text-neutral-400" />
-                  {c.name}
-                </button>
-              ))}
+              {categories.map((c) => {
+                const expanded = expandedCat === c.id;
+                return (
+                  <div key={c.id}>
+                    <button
+                      onClick={() => setExpandedCat(expanded ? null : c.id)}
+                      aria-expanded={expanded}
+                      className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50"
+                    >
+                      <LayoutGrid size={18} className="text-neutral-400" />
+                      {c.name}
+                      <ChevronDown
+                        size={16}
+                        className={cn(
+                          "ml-auto text-neutral-400 transition-transform duration-200",
+                          expanded && "rotate-180"
+                        )}
+                      />
+                    </button>
+                    {expanded && (
+                      <div className="ml-4 overflow-hidden border-l border-neutral-200 pl-2 animate-fade-in">
+                        <Link
+                          href={`/products?category=${c.id}`}
+                          onClick={() => setMenuOpen(false)}
+                          className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-semibold text-black hover:bg-neutral-50"
+                        >
+                          Shop all {c.name}
+                        </Link>
+                        {GENDER_OPTIONS.map((g) => (
+                          <Link
+                            key={g.id}
+                            href={`/products?category=${c.id}&gender=${g.id}`}
+                            onClick={() => setMenuOpen(false)}
+                            className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-neutral-600 hover:bg-neutral-50 hover:text-black"
+                          >
+                            {g.label}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
 
               <p className="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-neutral-400">
                 My account
@@ -426,5 +498,114 @@ export function Navbar() {
       )}
 
     </header>
+  );
+}
+
+/**
+ * A top-level category link (Clothing / Footwear) that reveals its Men / Women / Kids
+ * sub-navigation on hover for pointer devices and on tap for touch devices.
+ */
+function CategoryNavItem({
+  category,
+  active,
+  canHover,
+}: {
+  category: Category;
+  active: boolean;
+  canHover: boolean;
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const closeTimer = useRef<number | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [open]);
+
+  useEffect(
+    () => () => {
+      if (closeTimer.current) window.clearTimeout(closeTimer.current);
+    },
+    []
+  );
+
+  const openMenu = () => {
+    if (closeTimer.current) window.clearTimeout(closeTimer.current);
+    setOpen(true);
+  };
+  const scheduleClose = () => {
+    if (closeTimer.current) window.clearTimeout(closeTimer.current);
+    closeTimer.current = window.setTimeout(() => setOpen(false), 120);
+  };
+
+  const go = (gender?: Gender) => {
+    router.push(
+      gender
+        ? `/products?category=${category.id}&gender=${gender}`
+        : `/products?category=${category.id}`
+    );
+    setOpen(false);
+  };
+
+  const triggerClass = cn(
+    "relative flex items-center gap-1 whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors",
+    active
+      ? "font-bold text-black after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-black"
+      : "text-neutral-600 hover:text-black"
+  );
+
+  return (
+    <div
+      ref={ref}
+      className="relative"
+      onMouseEnter={canHover ? openMenu : undefined}
+      onMouseLeave={canHover ? scheduleClose : undefined}
+    >
+      {/* Hover-capable (desktop) devices get the mega menu; touch devices navigate to
+          the category page, where the "Shop For" gender filter gives the same reach. */}
+      <Link href={`/products?category=${category.id}`} className={triggerClass}>
+        {category.name}
+        {canHover && (
+          <ChevronDown
+            size={14}
+            className={cn("transition-transform duration-200", open && "rotate-180")}
+          />
+        )}
+      </Link>
+
+      {canHover && open && (
+        <div className="absolute left-0 top-full z-50 pt-1">
+          <div className="w-52 origin-top overflow-hidden rounded-lg border border-neutral-200 bg-white py-1.5 shadow-xl animate-fade-in">
+            <Link
+              href={`/products?category=${category.id}`}
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-400 transition-colors hover:bg-neutral-50 hover:text-black"
+            >
+              Shop all {category.name}
+            </Link>
+            <div className="my-1 border-t border-neutral-100" />
+            {GENDER_OPTIONS.map((g) => (
+              <button
+                key={g.id}
+                onClick={() => go(g.id)}
+                className="group/item flex w-full items-center justify-between px-4 py-2.5 text-left text-sm text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-black"
+              >
+                {g.label}
+                <ChevronRight
+                  size={15}
+                  className="text-neutral-300 transition-transform duration-200 group-hover/item:translate-x-0.5 group-hover/item:text-black"
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

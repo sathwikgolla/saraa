@@ -135,7 +135,7 @@ export default function AdminDashboardPage() {
           <div className="text-right hidden sm:block">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">Active Theme</p>
             <p className="text-xs text-black font-bold capitalize">
-              {settings.activeFestiveTheme.replace("_", " ")}
+              {settings?.activeFestiveTheme?.replace("_", " ") || "Default"}
             </p>
           </div>
           <Link

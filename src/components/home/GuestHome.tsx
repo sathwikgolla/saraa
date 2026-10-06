@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Sparkles, TrendingUp } from "lucide-react";
-import { products } from "@/data/products";
+import { useStore } from "@/context/StoreContext";
 import { ProductCard } from "@/components/product/ProductCard";
 import { HomeHero } from "@/components/home/HomeHero";
 import { CategorySection } from "@/components/home/CategorySection";
@@ -60,13 +60,15 @@ export function HomeSectionHeader({
 }
 
 export function GuestHome() {
+  const { products } = useStore();
+  
   // Real product collections from existing catalog
   const trendingProducts = products
-    .filter((p) => p.badges.includes("Trending"))
+    .filter((p) => p.badges?.includes("Trending"))
     .slice(0, 8);
 
   const featuredProducts = products
-    .filter((p) => p.badges.includes("Best Seller") || p.badges.includes("New"))
+    .filter((p) => p.badges?.includes("Best Seller") || p.badges?.includes("New"))
     .slice(0, 8);
 
   return (

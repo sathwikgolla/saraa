@@ -3,15 +3,14 @@
 import Link from "next/link";
 import { Heart, Trash2 } from "lucide-react";
 import type { CartItem as CartItemType } from "@/lib/types";
-import { getProductById } from "@/data/products";
 import { useStore } from "@/context/StoreContext";
 import { QuantitySelector } from "@/components/product/QuantitySelector";
 import { PriceDisplay } from "@/components/ui/PriceDisplay";
 import { handleImageError } from "@/lib/utils";
 
 export function CartItem({ item }: { item: CartItemType }) {
-  const { updateQty, removeFromCart, moveToWishlist } = useStore();
-  const product = getProductById(item.productId);
+  const { updateQty, removeFromCart, moveToWishlist, products } = useStore();
+  const product = products.find((p: any) => p.id === item.productId);
   if (!product) return null;
 
   const lineTotal = product.price * item.qty;

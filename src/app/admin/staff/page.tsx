@@ -43,6 +43,7 @@ export default function AdminStaffPage() {
       role,
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80",
       status: "active",
+      lastActive: new Date().toISOString(),
     });
 
     setName("");

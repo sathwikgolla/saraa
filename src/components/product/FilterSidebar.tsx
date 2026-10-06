@@ -1,13 +1,16 @@
 "use client";
 
 import { RotateCcw, SlidersHorizontal } from "lucide-react";
-import { categories } from "@/data/categories";
+import { useStore } from "@/context/StoreContext";
+import { GENDER_OPTIONS } from "@/lib/gender";
 import { cn } from "@/lib/utils";
 
 export const PRICE_MAX = 50000;
 
 export interface Filters {
   category: string; // "all" or category id
+  gender: string; // "" (all) | "men" | "women" | "kids"
+  subcategory: string; // "" or subcategory slug
   minPrice: number;
   maxPrice: number;
   rating: number; // 0 = any
@@ -20,6 +23,8 @@ export interface Filters {
 
 export const DEFAULT_FILTERS: Filters = {
   category: "all",
+  gender: "",
+  subcategory: "",
   minPrice: 0,
   maxPrice: PRICE_MAX,
   rating: 0,
@@ -55,12 +60,19 @@ export const SIZE_OPTIONS = ["XS", "S", "M", "L", "XL", "XXL"];
 
 const T = { MIN: "min", MAX: "max" } as const;
 
+export interface SubcategoryOptionItem {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 interface FilterSidebarProps {
   filters: Filters;
   onChange: (patch: Partial<Filters>) => void;
   availableBrands: string[];
   availableSizes: string[];
   availableColors: string[];
+  availableSubcategories?: SubcategoryOptionItem[];
   productCount: number;
 }
 
@@ -70,12 +82,27 @@ export function FilterSidebar({
   availableBrands,
   availableSizes,
   availableColors,
+  availableSubcategories = [],
   productCount,
 }: FilterSidebarProps) {
+  const { products, categories: dbCategories } = useStore();
+
+  // Prefer catalog categories from the database; fall back to product-derived ids.
+  const categories =
+    dbCategories && dbCategories.length > 0
+      ? dbCategories
+      : Array.from(new Set(products.map((p: any) => (p as any).categoryId))).map((id) => ({
+          id,
+          name: id.charAt(0).toUpperCase() + id.slice(1),
+          slug: id.toLowerCase(),
+        }));
+  
   const set = (patch: Partial<Filters>) => onChange(patch);
 
   const isDirty =
     filters.category !== "all" ||
+    filters.gender !== "" ||
+    filters.subcategory !== "" ||
     filters.minPrice > 0 ||
     filters.maxPrice < PRICE_MAX ||
     filters.rating !== 0 ||
@@ -142,6 +169,63 @@ export function FilterSidebar({
           ))}
         </div>
       </div>
+
+      <hr className="border-neutral-200" />
+
+      {/* Gender / Audience */}
+      <div>
+        <h3 className="mb-3 text-sm font-bold text-black">Shop For</h3>
+        <div className="space-y-2">
+          <button
+            onClick={() => set({ gender: "" })}
+            className="flex w-full items-center gap-2.5 text-left text-sm text-neutral-700 hover:text-black"
+          >
+            {radio(filters.gender === "")}
+            Everyone
+          </button>
+          {GENDER_OPTIONS.map((g) => (
+            <button
+              key={g.id}
+              onClick={() => set({ gender: filters.gender === g.id ? "" : g.id })}
+              className="flex w-full items-center gap-2.5 text-left text-sm text-neutral-700 hover:text-black"
+            >
+              {radio(filters.gender === g.id)}
+              {g.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Subcategory (dependent on the selected category + audience) */}
+      {availableSubcategories.length > 0 && (
+        <>
+          <hr className="border-neutral-200" />
+          <div>
+            <h3 className="mb-3 text-sm font-bold text-black">Subcategory</h3>
+            <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
+              <button
+                onClick={() => set({ subcategory: "" })}
+                className="flex w-full items-center gap-2.5 text-left text-sm text-neutral-700 hover:text-black"
+              >
+                {radio(filters.subcategory === "")}
+                All
+              </button>
+              {availableSubcategories.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() =>
+                    set({ subcategory: filters.subcategory === s.slug ? "" : s.slug })
+                  }
+                  className="flex w-full items-center gap-2.5 text-left text-sm text-neutral-700 hover:text-black"
+                >
+                  {radio(filters.subcategory === s.slug)}
+                  {s.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       <hr className="border-neutral-200" />
 

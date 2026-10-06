@@ -27,25 +27,65 @@ import type {
   StockChangeType,
   StockLedgerEntry,
   YouTubeVideoItem,
+  AdminSubcategory,
 } from "@/lib/adminTypes";
-import {
-  SEED_ANNOUNCEMENTS,
-  SEED_AUDIT_LOGS,
-  SEED_BANNERS,
-  SEED_CATEGORIES,
-  SEED_COUPONS,
-  SEED_CUSTOMERS,
-  SEED_FESTIVE_THEMES,
-  SEED_FILTERS,
-  SEED_ORDERS,
-  SEED_PAYMENTS,
-  SEED_PRODUCTS,
-  SEED_SETTINGS,
-  SEED_STAFF,
-  SEED_STOCK_LEDGER,
-  SEED_YOUTUBE_VIDEOS,
-} from "@/data/adminSeed";
 import { useStore } from "@/context/StoreContext";
+// Admin data access goes through server actions only. The service-role client
+// is server-only and must never be imported into this Client Component.
+import {
+  adminGetOrders,
+  adminGetPayments,
+  adminGetCustomers,
+  adminGetCoupons,
+  adminGetBanners,
+  adminGetAnnouncements,
+  adminGetYoutubeVideos,
+  adminGetSettings,
+  adminGetStaff,
+  adminGetAuditLogs,
+  adminGetStockLedger,
+  adminGetFilters,
+} from "@/app/actions/admin/reads";
+import {
+  adminCreateCoupon,
+  adminUpdateCoupon,
+  adminDeleteCoupon,
+} from "@/app/actions/admin/coupons";
+import { adminAddStaff, adminDeleteStaff } from "@/app/actions/admin/staff";
+import { adminUpdateSettings } from "@/app/actions/admin/settings";
+import {
+  adminSaveBanner,
+  adminDeleteBanner,
+  adminSaveAnnouncement,
+  adminDeleteAnnouncement,
+  adminSaveYoutubeVideo,
+  adminDeleteYoutubeVideo,
+} from "@/app/actions/admin/content";
+import { adminSaveFilter, adminDeleteFilter } from "@/app/actions/admin/filters";
+import { adminCreateAuditLog } from "@/app/actions/admin/audit";
+import {
+  adminSaveCategory,
+  adminDeleteCategory,
+  adminSaveSubcategory,
+  adminDeleteSubcategory,
+} from "@/app/actions/admin/categories";
+import {
+  adminCreateProduct,
+  adminUpdateProduct,
+  adminDeleteProduct,
+  adminToggleProductStatus,
+} from "@/app/actions/admin/products";
+import {
+  adminAdjustStock,
+  adminBulkUpdateStock,
+} from "@/app/actions/admin/inventory";
+import {
+  adminUpdateOrderStatus,
+  adminVerifyPayment,
+  adminRejectPayment,
+} from "@/app/actions/admin/orders";
+import { getCategories as getCategoriesSupabase } from "@/lib/supabase/categories";
+import { buildSubcategoryOptions } from "@/lib/catalogTaxonomy";
 
 export interface AdminToast {
   id: string;
@@ -72,6 +112,7 @@ interface AdminContextValue {
   currentStaff: StaffMember;
   auditLogs: AuditLogEntry[];
   toasts: AdminToast[];
+  loading: boolean;
 
   // Quick metrics
   pendingPaymentCount: number;
@@ -89,19 +130,19 @@ interface AdminContextValue {
   ) => void;
 
   // Orders & Payments
-  verifyPayment: (orderId: string, paymentId: string) => void;
-  rejectPayment: (orderId: string, paymentId: string, reason: string) => void;
+  verifyPayment: (orderId: string, paymentId: string) => Promise<void>;
+  rejectPayment: (orderId: string, paymentId: string, reason: string) => Promise<void>;
   updateOrderStatus: (
     orderId: string,
     newStatus: AdminOrderStatus,
     courierName?: string,
     trackingNumber?: string,
     note?: string
-  ) => void;
+  ) => Promise<void>;
   addInternalOrderNote: (orderId: string, note: string) => void;
 
   // Products
-  saveProduct: (product: Partial<AdminProduct>) => AdminProduct;
+  saveProduct: (product: Partial<AdminProduct>) => Promise<AdminProduct>;
   deleteProduct: (productId: string) => void;
   toggleProductStatus: (productId: string) => void;
 
@@ -112,38 +153,41 @@ interface AdminContextValue {
     change: number,
     type: StockChangeType,
     reason: string
-  ) => void;
-  bulkUpdateStock: (rows: { sku: string; stock: number }[]) => { updated: number; errors: string[] };
+  ) => Promise<void>;
+  bulkUpdateStock: (rows: { sku: string; stock: number }[]) => Promise<{ updated: number; errors: string[] }>;
 
   // Categories & Filters
-  saveCategory: (category: Partial<AdminCategory>) => AdminCategory;
-  deleteCategory: (id: string) => void;
-  saveFilter: (filter: Partial<CategoryFilter>) => CategoryFilter;
-  deleteFilter: (id: string) => void;
+  subcategories: AdminSubcategory[];
+  saveCategory: (category: Partial<AdminCategory>) => Promise<AdminCategory>;
+  deleteCategory: (id: string) => Promise<void>;
+  saveSubcategory: (sub: Partial<AdminSubcategory>) => Promise<AdminSubcategory>;
+  deleteSubcategory: (categoryId: string, name: string) => Promise<void>;
+  saveFilter: (filter: Partial<CategoryFilter>) => Promise<CategoryFilter>;
+  deleteFilter: (id: string) => Promise<void>;
 
   // Customers
   toggleCustomerBlock: (id: string, reason?: string) => void;
 
   // Coupons
-  saveCoupon: (coupon: Partial<AdminCoupon>) => AdminCoupon;
-  deleteCoupon: (id: string) => void;
+  saveCoupon: (coupon: Partial<AdminCoupon>) => Promise<AdminCoupon>;
+  deleteCoupon: (id: string) => Promise<void>;
 
   // Content & Festive theme
   switchFestiveTheme: (themeId: FestiveTheme["id"]) => void;
-  saveBanner: (banner: Partial<AdminBanner>) => AdminBanner;
-  deleteBanner: (id: string) => void;
-  saveAnnouncement: (text: string) => void;
+  saveBanner: (banner: Partial<AdminBanner>) => Promise<AdminBanner>;
+  deleteBanner: (id: string) => Promise<void>;
+  saveAnnouncement: (text: string) => Promise<void>;
   toggleAnnouncement: (id: string) => void;
-  deleteAnnouncement: (id: string) => void;
-  saveYouTubeVideo: (video: Partial<YouTubeVideoItem>) => YouTubeVideoItem;
-  deleteYouTubeVideo: (id: string) => void;
+  deleteAnnouncement: (id: string) => Promise<void>;
+  saveYouTubeVideo: (video: Partial<YouTubeVideoItem>) => Promise<YouTubeVideoItem>;
+  deleteYouTubeVideo: (id: string) => Promise<void>;
 
   // Settings
-  saveSettings: (patch: Partial<AdminSettings>) => void;
+  saveSettings: (patch: Partial<AdminSettings>) => Promise<void>;
 
   // Staff
-  addStaff: (member: Omit<StaffMember, "id" | "lastActive">) => void;
-  deleteStaff: (id: string) => void;
+  addStaff: (member: Omit<StaffMember, "id" | "createdAt" | "updatedAt">) => Promise<void>;
+  deleteStaff: (id: string) => Promise<void>;
 
   // Utilities
   exportToCsv: (data: Record<string, unknown>[], filename: string) => void;
@@ -152,60 +196,108 @@ interface AdminContextValue {
 
 const AdminContext = createContext<AdminContextValue | null>(null);
 
-function useStoredAdmin<T>(key: string, fallback: T) {
-  const [state, setState] = useState<T>(fallback);
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(key);
-      if (raw) setState(JSON.parse(raw) as T);
-    } catch {
-      // storage unavailable
-    }
-    setHydrated(true);
-  }, [key]);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    try {
-      localStorage.setItem(key, JSON.stringify(state));
-    } catch {
-      // storage quota or unavailable
-    }
-  }, [key, state, hydrated]);
-
-  return [state, setState] as const;
-}
-
 export function AdminProvider({ children }: { children: ReactNode }) {
-  const {
-    products: storeProducts,
-    saveProduct: storeSaveProduct,
-    deleteProduct: storeDeleteProduct,
-    toggleProductStatus: storeToggleProductStatus,
-    adjustStock: storeAdjustStock,
-    bulkUpdateStock: storeBulkUpdateStock,
-    resetProducts: storeResetProducts,
-  } = useStore();
+  const { products: storeProducts } = useStore();
 
   const products = storeProducts as unknown as AdminProduct[];
-  const [categories, setCategories] = useStoredAdmin<AdminCategory[]>("miracle:admin:categories", SEED_CATEGORIES);
-  const [filters, setFilters] = useStoredAdmin<CategoryFilter[]>("miracle:admin:filters", SEED_FILTERS);
-  const [orders, setOrders] = useStoredAdmin<AdminOrder[]>("miracle:admin:orders", SEED_ORDERS);
-  const [payments, setPayments] = useStoredAdmin<AdminPayment[]>("miracle:admin:payments", SEED_PAYMENTS);
-  const [stockLedger, setStockLedger] = useStoredAdmin<StockLedgerEntry[]>("miracle:admin:stock_ledger", SEED_STOCK_LEDGER);
-  const [customers, setCustomers] = useStoredAdmin<AdminCustomer[]>("miracle:admin:customers", SEED_CUSTOMERS);
-  const [coupons, setCoupons] = useStoredAdmin<AdminCoupon[]>("miracle:admin:coupons", SEED_COUPONS);
-  const [banners, setBanners] = useStoredAdmin<AdminBanner[]>("miracle:admin:banners", SEED_BANNERS);
-  const [announcements, setAnnouncements] = useStoredAdmin<AnnouncementBarItem[]>("miracle:admin:announcements", SEED_ANNOUNCEMENTS);
-  const [youtubeVideos, setYoutubeVideos] = useStoredAdmin<YouTubeVideoItem[]>("miracle:admin:youtube", SEED_YOUTUBE_VIDEOS);
-  const [settings, setSettings] = useStoredAdmin<AdminSettings>("miracle:admin:settings", SEED_SETTINGS);
-  const [staff, setStaff] = useStoredAdmin<StaffMember[]>("miracle:admin:staff", SEED_STAFF);
-  const [auditLogs, setAuditLogs] = useStoredAdmin<AuditLogEntry[]>("miracle:admin:audit_logs", SEED_AUDIT_LOGS);
+  
+  // Supabase-backed state
+  const [categories, setCategories] = useState<AdminCategory[]>([]);
 
-  const [currentStaff, setCurrentStaff] = useState<StaffMember>(staff[0] ?? SEED_STAFF[0]);
+  // Subcategory nodes are DERIVED from the categories table + shared taxonomy.
+  // There is no `subcategories` table and no query against one.
+  const subcategories = useMemo<AdminSubcategory[]>(
+    () =>
+      buildSubcategoryOptions(categories).map((option) => ({
+        id: option.id,
+        categoryId: option.categoryId,
+        gender: option.gender as AdminSubcategory["gender"],
+        name: option.name,
+        slug: option.slug,
+        sortOrder: option.sortOrder,
+        active: true,
+      })),
+    [categories]
+  );
+  const [filters, setFilters] = useState<CategoryFilter[]>([]);
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [payments, setPayments] = useState<AdminPayment[]>([]);
+  const [stockLedger, setStockLedger] = useState<StockLedgerEntry[]>([]);
+  const [customers, setCustomers] = useState<AdminCustomer[]>([]);
+  const [coupons, setCoupons] = useState<AdminCoupon[]>([]);
+  const [banners, setBanners] = useState<AdminBanner[]>([]);
+  const [announcements, setAnnouncements] = useState<AnnouncementBarItem[]>([]);
+  const [youtubeVideos, setYoutubeVideos] = useState<YouTubeVideoItem[]>([]);
+  const [settings, setSettings] = useState<AdminSettings | null>(null);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+  const [festiveThemes, setFestiveThemes] = useState<FestiveTheme[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [currentStaff, setCurrentStaff] = useState<StaffMember | null>(null);
   const [toasts, setToasts] = useState<AdminToast[]>([]);
+
+  // Load initial data from Supabase
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true);
+      try {
+        const [
+          ordersRes,
+          paymentsRes,
+          customersRes,
+          couponsRes,
+          bannersRes,
+          announcementsRes,
+          youtubeVideosRes,
+          settingsRes,
+          staffRes,
+          auditLogsRes,
+          stockLedgerRes,
+          filtersRes,
+          categoriesData,
+        ] = await Promise.all([
+          adminGetOrders(),
+          adminGetPayments(),
+          adminGetCustomers(),
+          adminGetCoupons(),
+          adminGetBanners(),
+          adminGetAnnouncements(),
+          adminGetYoutubeVideos(),
+          adminGetSettings(),
+          adminGetStaff(),
+          adminGetAuditLogs(),
+          adminGetStockLedger(),
+          adminGetFilters(),
+          getCategoriesSupabase(),
+        ]);
+
+        setOrders(ordersRes.success ? ordersRes.data : []);
+        setPayments(paymentsRes.success ? paymentsRes.data : []);
+        setCustomers(customersRes.success ? customersRes.data : []);
+        setCoupons(couponsRes.success ? couponsRes.data : []);
+        setBanners(bannersRes.success ? bannersRes.data : []);
+        setAnnouncements(announcementsRes.success ? announcementsRes.data : []);
+        setYoutubeVideos(youtubeVideosRes.success ? youtubeVideosRes.data : []);
+        setSettings(settingsRes.success ? settingsRes.data : null);
+        setStaff(staffRes.success ? staffRes.data : []);
+        setAuditLogs(auditLogsRes.success ? auditLogsRes.data : []);
+        setStockLedger(stockLedgerRes.success ? stockLedgerRes.data : []);
+        setFilters(filtersRes.success ? filtersRes.data : []);
+        setCategories(categoriesData as AdminCategory[]);
+        
+        if (staffRes.success && staffRes.data.length > 0) {
+          setCurrentStaff(staffRes.data[0]);
+        }
+      } catch (error) {
+        console.error('Error loading admin data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
+  }, []);
 
   const adminToast = useCallback((message: string, type: AdminToast["type"] = "success") => {
     const id = "t_" + Math.random().toString(36).slice(2, 9);
@@ -221,6 +313,17 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       action: AuditLogEntry["action"],
       description: string
     ) => {
+      if (!currentStaff) return;
+      // Persisted server-side (service-role, admin-verified). Fire-and-forget so
+      // an audit write never blocks the action it describes.
+      void adminCreateAuditLog({
+        staffName: currentStaff.name,
+        role: currentStaff.role,
+        module,
+        action,
+        description,
+        ipAddress: "unknown",
+      }).catch(() => {});
       const entry: AuditLogEntry = {
         id: "aud_" + Math.random().toString(36).slice(2, 9),
         timestamp: new Date().toISOString(),
@@ -229,11 +332,11 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         module,
         action,
         description,
-        ipAddress: "192.168.1.104",
+        ipAddress: "unknown",
       };
       setAuditLogs((prev) => [entry, ...prev].slice(0, 200));
     },
-    [currentStaff, setAuditLogs]
+    [currentStaff]
   );
 
   // Calculations
@@ -253,680 +356,597 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   }, [products]);
 
   const totalRevenue = useMemo(
-    () =>
-      orders
-        .filter((o) => o.paymentStatus === "Verified" || o.orderStatus === "Delivered")
-        .reduce((sum, o) => sum + o.total, 0),
+    () => orders.reduce((sum, o) => sum + o.total, 0),
     [orders]
   );
 
   const todaySales = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
     return orders
-      .filter((o) => o.paymentStatus === "Verified")
-      .slice(0, 3)
+      .filter((o) => o.placedAt.startsWith(today))
       .reduce((sum, o) => sum + o.total, 0);
   }, [orders]);
 
-  // ---------------- Payment verification & Order lifecycle ----------------
+  // Orders & Payments
   const verifyPayment = useCallback(
-    (orderId: string, paymentId: string) => {
-      const timestamp = new Date().toISOString();
-      setPayments((prev) =>
-        prev.map((p) =>
-          p.id === paymentId
-            ? {
-                ...p,
-                status: "verified",
-                verifiedAt: timestamp,
-                verifiedBy: currentStaff.name,
-              }
-            : p
-        )
-      );
-
-      setOrders((prev) =>
-        prev.map((o) => {
-          if (o.id === orderId) {
-            return {
-              ...o,
-              orderStatus: "Payment Verified",
-              paymentStatus: "Verified",
-              timeline: [
-                ...o.timeline,
-                {
-                  status: "Payment Verified",
-                  timestamp,
-                  note: `Payment verified by ${currentStaff.name} against merchant bank statement. Stock converted from reservation to sale.`,
-                  staff: currentStaff.name,
-                },
-              ],
-            };
-          }
-          return o;
-        })
-      );
-
-      logAudit(
-        "Payments",
-        "Verify",
-        `Verified payment ${paymentId} for Order ${orderId}. Order marked 'Payment Verified'.`
-      );
-      adminToast(`Payment for Order #${orderId} verified successfully!`, "success");
+    async (orderId: string, paymentId: string) => {
+      if (!currentStaff) return;
+      const result = await adminVerifyPayment(paymentId, currentStaff.name);
+      if (result.success) {
+        setOrders((prev) => prev.map((o) => 
+          o.id === orderId ? { ...o, paymentStatus: "Verified" as const } : o
+        ));
+        setPayments((prev) => prev.map((p) => 
+          p.id === paymentId ? { ...p, status: "verified" as const } : p
+        ));
+        logAudit("Payments", "Verify", `Verified payment ${paymentId} for order ${orderId}`);
+        adminToast("Payment verified", "success");
+      } else {
+        adminToast(result.error || "Failed to verify payment", "error");
+      }
     },
-    [currentStaff, logAudit, adminToast, setPayments, setOrders]
+    [currentStaff, logAudit, adminToast]
   );
 
   const rejectPayment = useCallback(
-    (orderId: string, paymentId: string, reason: string) => {
-      const timestamp = new Date().toISOString();
-      setPayments((prev) =>
-        prev.map((p) =>
-          p.id === paymentId
-            ? {
-                ...p,
-                status: "rejected",
-                rejectionReason: reason,
-                verifiedAt: timestamp,
-                verifiedBy: currentStaff.name,
-              }
-            : p
-        )
-      );
-
-      setOrders((prev) =>
-        prev.map((o) => {
-          if (o.id === orderId) {
-            return {
-              ...o,
-              orderStatus: "Payment Rejected",
-              paymentStatus: "Failed",
-              timeline: [
-                ...o.timeline,
-                {
-                  status: "Payment Rejected",
-                  timestamp,
-                  note: `Payment rejected by ${currentStaff.name}. Reason: ${reason}. Soft reservation released back to inventory.`,
-                  staff: currentStaff.name,
-                },
-              ],
-            };
-          }
-          return o;
-        })
-      );
-
-      logAudit(
-        "Payments",
-        "Reject",
-        `Rejected payment ${paymentId} for Order ${orderId}. Reason: ${reason}`
-      );
-      adminToast(`Payment for Order #${orderId} rejected. Customer notified.`, "info");
+    async (orderId: string, paymentId: string, reason: string) => {
+      if (!currentStaff) return;
+      const result = await adminRejectPayment(paymentId, reason, currentStaff.name);
+      if (result.success) {
+        setOrders((prev) => prev.map((o) => 
+          o.id === orderId ? { ...o, paymentStatus: "Failed" as const } : o
+        ));
+        setPayments((prev) => prev.map((p) => 
+          p.id === paymentId ? { ...p, status: "rejected" as const, rejectionReason: reason } : p
+        ));
+        logAudit("Payments", "Reject", `Rejected payment ${paymentId} for order ${orderId}: ${reason}`);
+        adminToast("Payment rejected", "error");
+      } else {
+        adminToast(result.error || "Failed to reject payment", "error");
+      }
     },
-    [currentStaff, logAudit, adminToast, setPayments, setOrders]
+    [currentStaff, logAudit, adminToast]
   );
 
   const updateOrderStatus = useCallback(
-    (
+    async (
       orderId: string,
       newStatus: AdminOrderStatus,
       courierName?: string,
       trackingNumber?: string,
       note?: string
     ) => {
-      const timestamp = new Date().toISOString();
-      setOrders((prev) =>
-        prev.map((o) => {
+      if (!currentStaff) return;
+      const result = await adminUpdateOrderStatus(orderId, newStatus, currentStaff.name, note);
+      if (result.success) {
+        setOrders((prev) => prev.map((o) => {
           if (o.id === orderId) {
-            const updated: AdminOrder = {
-              ...o,
-              orderStatus: newStatus,
-              courierName: courierName || o.courierName,
-              trackingNumber: trackingNumber || o.trackingNumber,
-              trackingUrl:
-                trackingNumber && courierName
-                  ? `https://track.miraclecollections.in/?awb=${trackingNumber}`
-                  : o.trackingUrl,
-              timeline: [
-                ...o.timeline,
-                {
-                  status: newStatus,
-                  timestamp,
-                  note:
-                    note ||
-                    `Status advanced to ${newStatus}${
-                      trackingNumber ? ` via ${courierName} (AWB: ${trackingNumber})` : ""
-                    }`,
-                  staff: currentStaff.name,
-                },
-              ],
-            };
+            const updated = { ...o, orderStatus: newStatus };
+            if (courierName) updated.courierName = courierName;
+            if (trackingNumber) updated.trackingNumber = trackingNumber;
+            if (note) updated.internalNotes = [...(o.internalNotes || []), note];
             return updated;
           }
           return o;
-        })
-      );
-
-      logAudit("Orders", "Update", `Order ${orderId} moved to '${newStatus}'`);
-      adminToast(`Order #${orderId} status updated to ${newStatus}`, "success");
+        }));
+        logAudit("Orders", "Update", `Updated order ${orderId} to ${newStatus}`);
+        adminToast(`Order status updated to ${newStatus}`);
+      } else {
+        adminToast(result.error || "Failed to update order status", "error");
+      }
     },
-    [currentStaff, logAudit, adminToast, setOrders]
+    [currentStaff, logAudit, adminToast]
   );
 
-  const addInternalOrderNote = useCallback(
-    (orderId: string, note: string) => {
-      setOrders((prev) =>
-        prev.map((o) => {
-          if (o.id === orderId) {
-            return {
-              ...o,
-              internalNotes: [...(o.internalNotes || []), `${currentStaff.name}: ${note}`],
-            };
-          }
-          return o;
-        })
-      );
-      logAudit("Orders", "Update", `Added internal note to Order ${orderId}`);
-      adminToast("Note added to order", "info");
-    },
-    [currentStaff, logAudit, adminToast, setOrders]
-  );
+  const addInternalOrderNote = useCallback((orderId: string, note: string) => {
+    setOrders((prev) => prev.map((o) => {
+      if (o.id === orderId) {
+        return {
+          ...o,
+          internalNotes: [...(o.internalNotes || []), note],
+        };
+      }
+      return o;
+    }));
+    logAudit("Orders", "Update", `Added note to order ${orderId}`);
+    adminToast("Note added to order");
+  }, [logAudit, adminToast]);
 
-  // ---------------- Products (Synchronized with Store) ----------------
-  const saveProduct = useCallback(
-    (patch: Partial<AdminProduct>): AdminProduct => {
-      const saved = storeSaveProduct(patch as any);
-      logAudit(
-        "Products",
-        patch.id ? "Update" : "Create",
-        `${patch.id ? "Updated" : "Created"} product '${saved.name}'`
-      );
-      adminToast(
-        patch.id ? "Product updated successfully" : `Product "${saved.name}" created`,
-        "success"
-      );
-      return saved as unknown as AdminProduct;
-    },
-    [storeSaveProduct, logAudit, adminToast]
-  );
+  // Products
+  const saveProduct = useCallback(async (product: Partial<AdminProduct>): Promise<AdminProduct> => {
+    if (product.id && products.some((p) => p.id === product.id)) {
+      const result = await adminUpdateProduct(product.id, product as any);
+      if (result.success) {
+        logAudit("Products", "Update", `Updated product '${product.name || product.id}'`);
+        adminToast("Product updated", "success");
+        return product as AdminProduct;
+      } else {
+        adminToast(result.error || "Failed to update product", "error");
+        return product as AdminProduct;
+      }
+    } else {
+      const result = await adminCreateProduct(product as any);
+      if (result.success) {
+        logAudit("Products", "Create", `Created product '${product.name || product.id}'`);
+        adminToast("Product created", "success");
+        return product as AdminProduct;
+      } else {
+        adminToast(result.error || "Failed to create product", "error");
+        return product as AdminProduct;
+      }
+    }
+  }, [products, logAudit, adminToast]);
 
-  const deleteProduct = useCallback(
-    (productId: string) => {
-      const match = products.find((p) => p.id === productId);
-      storeDeleteProduct(productId);
-      logAudit("Products", "Delete", `Deleted product '${match?.name || productId}'`);
+  const deleteProduct = useCallback(async (productId: string) => {
+    const result = await adminDeleteProduct(productId);
+    if (result.success) {
+      logAudit("Products", "Delete", `Deleted product ${productId}`);
       adminToast("Product deleted", "info");
-    },
-    [products, storeDeleteProduct, logAudit, adminToast]
-  );
+    } else {
+      adminToast(result.error || "Failed to delete product", "error");
+    }
+  }, [logAudit, adminToast]);
 
-  const toggleProductStatus = useCallback(
-    (productId: string) => {
+  const toggleProductStatus = useCallback(async (productId: string) => {
+    const result = await adminToggleProductStatus(productId);
+    if (result.success) {
       const match = products.find((p) => p.id === productId);
-      storeToggleProductStatus(productId);
       const nextStatus = match?.status === "live" ? "draft" : "live";
       logAudit("Products", "Update", `Changed '${match?.name || productId}' status to ${nextStatus}`);
       adminToast(`Product is now ${nextStatus.toUpperCase()}`, "info");
-    },
-    [products, storeToggleProductStatus, logAudit, adminToast]
-  );
+    } else {
+      adminToast(result.error || "Failed to toggle product status", "error");
+    }
+  }, [products, logAudit, adminToast]);
 
-  // ---------------- Inventory & Stock ----------------
+  // Inventory & Stock
   const adjustStock = useCallback(
-    (
+    async (
       productId: string,
       variantSku: string,
       change: number,
       type: StockChangeType,
       reason: string
     ) => {
-      const timestamp = new Date().toISOString();
-      let prodName = "";
-      let varLabel = "";
-      let prevCount = 0;
-      let newCount = 0;
+      const prod = products.find((p) => p.id === productId);
+      const prodName = prod?.name;
+      const varIndex = prod?.variants?.findIndex((v) => v.sku === variantSku) ?? -1;
+      const variant = prod?.variants?.[varIndex];
+      const varLabel = variant ? `${variant.size} / ${variant.color}` : variantSku;
+      const prevCount = variant?.stock ?? 0;
+      const newCount = Math.max(0, prevCount + change);
 
-      const p = products.find((x) => x.id === productId);
-      if (p) {
-        prodName = p.name;
-        const v = p.variants.find((x) => x.sku === variantSku);
-        if (v) {
-          prevCount = v.stock;
-          newCount = Math.max(0, v.stock + change);
-          varLabel = `${v.color} / ${v.size}`;
-        }
+      const result = await adminAdjustStock(productId, variantSku, change);
+      if (result.success) {
+        const ledgerEntry: StockLedgerEntry = {
+          id: `SL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          timestamp: new Date().toISOString(),
+          productId,
+          productName: prodName || "Product",
+          variantSku,
+          variantLabel: varLabel,
+          type,
+          change,
+          previousStock: prevCount,
+          newStock: newCount,
+          reason,
+          staffName: currentStaff?.name || "System",
+          referenceId: productId,
+        };
+        setStockLedger((prev) => [ledgerEntry, ...prev]);
+        logAudit("Inventory", "Adjust Stock", `Stock ${type.toLowerCase()}: ${prodName} (${varLabel}) by ${change} - ${reason}`);
+        adminToast(`Stock updated: ${varLabel} ${change > 0 ? "+" : ""}${change}`, "success");
+      } else {
+        adminToast(result.error || "Failed to adjust stock", "error");
       }
-
-      storeAdjustStock(productId, variantSku, change, type, reason);
-
-      const ledgerEntry: StockLedgerEntry = {
-        id: "led_" + Math.random().toString(36).slice(2, 9),
-        timestamp,
-        productId,
-        productName: prodName || "Product",
-        variantSku,
-        variantLabel: varLabel || variantSku,
-        type,
-        change,
-        previousStock: prevCount,
-        newStock: newCount,
-        reason,
-        staffName: currentStaff.name,
-      };
-
-      setStockLedger((prev) => [ledgerEntry, ...prev]);
-      logAudit(
-        "Inventory",
-        "Adjust Stock",
-        `Adjusted ${variantSku} by ${change > 0 ? "+" : ""}${change} units (${reason})`
-      );
-      adminToast(`Stock updated for ${variantSku} (${prevCount} → ${newCount})`, "success");
     },
-    [products, currentStaff, logAudit, adminToast, storeAdjustStock, setStockLedger]
+    [products, currentStaff, logAudit, adminToast]
   );
 
   const bulkUpdateStock = useCallback(
-    (rows: { sku: string; stock: number }[]) => {
-      const res = storeBulkUpdateStock(rows);
-      logAudit("Inventory", "Adjust Stock", `Bulk updated ${res.updated} SKUs via CSV import`);
-      adminToast(`Bulk updated ${res.updated} inventory variants successfully!`, "success");
-      return res;
+    async (rows: { sku: string; stock: number }[]) => {
+      const result = await adminBulkUpdateStock(rows);
+      if (!result.success) {
+        adminToast(result.error, "error");
+        return { updated: 0, errors: [result.error] };
+      }
+      logAudit("Inventory", "Adjust Stock", `Bulk updated stock for ${result.data.updated} SKU(s)`);
+      adminToast(`Updated stock for ${result.data.updated} SKU(s)`, "success");
+      return { updated: result.data.updated, errors: result.data.errors };
     },
-    [storeBulkUpdateStock, logAudit, adminToast]
+    [logAudit, adminToast]
   );
 
-  // ---------------- Categories & Filters ----------------
+  // Categories & Filters
   const saveCategory = useCallback(
-    (patch: Partial<AdminCategory>): AdminCategory => {
-      let saved: AdminCategory;
-      if (patch.id && categories.some((c) => c.id === patch.id)) {
-        setCategories((prev) =>
-          prev.map((c) => {
-            if (c.id === patch.id) {
-              saved = { ...c, ...patch } as AdminCategory;
-              return saved;
-            }
-            return c;
-          })
+    async (patch: Partial<AdminCategory>): Promise<AdminCategory> => {
+      const result = await adminSaveCategory(patch);
+      if (result.success && result.data) {
+        const saved = result.data;
+        setCategories((prev) => {
+          const exists = prev.some((c) => c.id === saved.id);
+          return exists ? prev.map((c) => (c.id === saved.id ? saved : c)) : [saved, ...prev];
+        });
+        logAudit(
+          "Categories",
+          patch.id ? "Update" : "Create",
+          `${patch.id ? "Updated" : "Created"} category '${saved.name}'`
         );
-        logAudit("Categories", "Update", `Updated category '${patch.name || patch.id}'`);
-        adminToast("Category updated", "success");
-      } else {
-        const id = patch.slug || (patch.name ? patch.name.toLowerCase().replace(/[^a-z0-9]/g, "-") : "cat_" + Date.now());
-        saved = {
-          id,
-          name: patch.name || "New Category",
-          slug: patch.slug || id,
-          image: patch.image || "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80",
-          description: patch.description || "",
-          subcategories: patch.subcategories || [],
-          productCount: 0,
-          active: true,
-        };
-        setCategories((prev) => [...prev, saved]);
-        logAudit("Categories", "Create", `Created category '${saved.name}'`);
-        adminToast(`Category "${saved.name}" added`, "success");
+        adminToast(patch.id ? "Category updated" : "Category created", "success");
+        return saved;
       }
-      return saved!;
+      if (!result.success) adminToast(result.error, "error");
+      return categories[0] ?? ({} as AdminCategory);
     },
-    [categories, logAudit, adminToast, setCategories]
+    [categories, logAudit, adminToast]
   );
 
   const deleteCategory = useCallback(
-    (id: string) => {
+    async (id: string) => {
+      const result = await adminDeleteCategory(id);
+      if (!result.success) {
+        adminToast(result.error, "error");
+        return;
+      }
       setCategories((prev) => prev.filter((c) => c.id !== id));
       logAudit("Categories", "Delete", `Deleted category ${id}`);
-      adminToast("Category removed", "info");
+      adminToast("Category deleted", "info");
     },
-    [logAudit, adminToast, setCategories]
+    [logAudit, adminToast]
+  );
+
+  const saveSubcategory = useCallback(
+    async (patch: Partial<AdminSubcategory>): Promise<AdminSubcategory> => {
+      const result = await adminSaveSubcategory(patch);
+      if (result.success && result.data) {
+        const saved = result.data;
+        setCategories((prev) =>
+          prev.map((c) =>
+            c.id === saved.categoryId &&
+            !(c.subcategories ?? []).some((n) => n.toLowerCase() === saved.name.toLowerCase())
+              ? { ...c, subcategories: [...(c.subcategories ?? []), saved.name] }
+              : c
+          )
+        );
+        logAudit("Categories", "Update", `Saved subcategory '${saved.name}'`);
+        adminToast("Subcategory saved", "success");
+        return saved;
+      }
+      if (!result.success) adminToast(result.error, "error");
+      return {} as AdminSubcategory;
+    },
+    [logAudit, adminToast]
+  );
+
+  const deleteSubcategory = useCallback(
+    async (categoryId: string, name: string) => {
+      const result = await adminDeleteSubcategory({ categoryId, name });
+      if (!result.success) {
+        adminToast(result.error, "error");
+        return;
+      }
+      setCategories((prev) =>
+        prev.map((c) =>
+          c.id === categoryId
+            ? {
+                ...c,
+                subcategories: (c.subcategories ?? []).filter(
+                  (n) => n.toLowerCase() !== name.toLowerCase()
+                ),
+              }
+            : c
+        )
+      );
+      logAudit("Categories", "Delete", `Deleted subcategory ${name}`);
+      adminToast("Subcategory deleted", "info");
+    },
+    [logAudit, adminToast]
   );
 
   const saveFilter = useCallback(
-    (patch: Partial<CategoryFilter>): CategoryFilter => {
-      let saved: CategoryFilter;
-      if (patch.id && filters.some((f) => f.id === patch.id)) {
-        setFilters((prev) =>
-          prev.map((f) => {
-            if (f.id === patch.id) {
-              saved = { ...f, ...patch } as CategoryFilter;
-              return saved;
-            }
-            return f;
-          })
-        );
-        logAudit("Categories", "Update", `Updated filter '${patch.name}'`);
-        adminToast("Filter updated", "success");
-      } else {
-        const id = "flt_" + Math.random().toString(36).slice(2, 7);
-        saved = {
-          id,
-          name: patch.name || "New Filter",
-          key: patch.key || (patch.name ? patch.name.toLowerCase().replace(/[^a-z0-9]/g, "_") : "attr"),
-          targetCategories: patch.targetCategories || ["men", "women", "kids", "footwear"],
-          type: patch.type || "multiselect",
-          options: patch.options || [],
-          active: true,
-        };
-        setFilters((prev) => [...prev, saved]);
-        logAudit("Categories", "Create", `Created filter '${saved.name}' with ${saved.options.length} options`);
-        adminToast(`Filter "${saved.name}" created`, "success");
+    async (patch: Partial<CategoryFilter>): Promise<CategoryFilter> => {
+      const result = await adminSaveFilter(patch);
+      if (result.success && result.data) {
+        const saved = result.data;
+        setFilters((prev) => {
+          const exists = prev.some((f) => f.id === saved.id);
+          if (exists) {
+            return prev.map((f) => (f.id === saved.id ? saved : f));
+          }
+          return [saved, ...prev];
+        });
+        logAudit("Categories", "Update", `Saved filter '${patch.name || patch.id}'`);
+        adminToast("Filter saved", "success");
+        return saved;
       }
-      return saved!;
+      if (!result.success) adminToast(result.error, "error");
+      return filters[0] as CategoryFilter;
     },
-    [filters, logAudit, adminToast, setFilters]
+    [filters, logAudit, adminToast]
   );
 
   const deleteFilter = useCallback(
-    (id: string) => {
+    async (id: string) => {
+      const result = await adminDeleteFilter(id);
+      if (!result.success) {
+        adminToast(result.error, "error");
+        return;
+      }
       setFilters((prev) => prev.filter((f) => f.id !== id));
       logAudit("Categories", "Delete", `Deleted filter ${id}`);
       adminToast("Filter deleted", "info");
     },
-    [logAudit, adminToast, setFilters]
+    [logAudit, adminToast]
   );
 
-  // ---------------- Customers ----------------
-  const toggleCustomerBlock = useCallback(
-    (id: string, reason?: string) => {
-      setCustomers((prev) =>
-        prev.map((c) => {
-          if (c.id === id) {
-            const nextStatus = c.status === "active" ? "blocked" : "active";
-            logAudit(
-              "Orders",
-              "Update",
-              `${nextStatus === "blocked" ? "Blocked" : "Unblocked"} customer ${c.name}`
-            );
-            adminToast(`Customer ${c.name} is now ${nextStatus.toUpperCase()}`, "info");
-            return {
-              ...c,
-              status: nextStatus,
-              blockReason: nextStatus === "blocked" ? reason || "Flagged by Admin" : undefined,
-            };
-          }
-          return c;
-        })
-      );
-    },
-    [logAudit, adminToast, setCustomers]
-  );
+  // Customers
+  const toggleCustomerBlock = useCallback((id: string, reason?: string) => {
+    setCustomers((prev) =>
+      prev.map((c) => {
+        if (c.id === id) {
+          const blocked = !(c as any).blocked;
+          logAudit("Orders", "Update", `${blocked ? "Blocked" : "Unblocked"} customer ${c.name}${reason ? `: ${reason}` : ""}`);
+          adminToast(`Customer ${blocked ? "blocked" : "unblocked"}`, blocked ? "error" : "success");
+          return { ...c, blocked, blockedAt: blocked ? new Date().toISOString() : undefined, blockReason: blocked ? reason : undefined };
+        }
+        return c;
+      })
+    );
+  }, [logAudit, adminToast]);
 
-  // ---------------- Coupons ----------------
+  // Coupons
   const saveCoupon = useCallback(
-    (patch: Partial<AdminCoupon>): AdminCoupon => {
-      let saved: AdminCoupon;
+    async (patch: Partial<AdminCoupon>): Promise<AdminCoupon> => {
+      let result: AdminCoupon | null = null;
       if (patch.id && coupons.some((c) => c.id === patch.id)) {
-        setCoupons((prev) =>
-          prev.map((c) => {
-            if (c.id === patch.id) {
-              saved = { ...c, ...patch } as AdminCoupon;
-              return saved;
-            }
-            return c;
-          })
-        );
-        logAudit("Coupons", "Update", `Updated coupon '${patch.code}'`);
-        adminToast("Coupon updated", "success");
+        const res = await adminUpdateCoupon(patch.id, patch);
+        if (!res.success) {
+          adminToast(res.error, "error");
+        } else {
+          const existing = coupons.find((c) => c.id === patch.id);
+          if (existing) {
+            result = { ...existing, ...patch } as AdminCoupon;
+            setCoupons((prev) => prev.map((c) => (c.id === patch.id ? result! : c)));
+            logAudit("Coupons", "Update", `Updated coupon '${patch.code || patch.id}'`);
+            adminToast("Coupon updated", "success");
+          }
+        }
       } else {
-        const id = "c_" + Math.random().toString(36).slice(2, 7);
-        saved = {
-          id,
-          code: (patch.code || "SAVE10").toUpperCase().trim(),
-          description: patch.description || "",
-          discountType: patch.discountType || "percentage",
-          discountValue: patch.discountValue || 10,
-          minOrder: patch.minOrder || 999,
-          maxDiscountCap: patch.maxDiscountCap,
-          startDate: patch.startDate || new Date().toISOString().split("T")[0],
-          expiryDate: patch.expiryDate || "2026-12-31",
-          usageLimit: patch.usageLimit || 500,
-          usedCount: 0,
-          active: true,
-        };
-        setCoupons((prev) => [saved, ...prev]);
-        logAudit("Coupons", "Create", `Created coupon code '${saved.code}'`);
-        adminToast(`Coupon "${saved.code}" added`, "success");
+        const res = await adminCreateCoupon(
+          patch as Omit<AdminCoupon, "id" | "usedCount" | "createdAt" | "updatedAt">
+        );
+        if (!res.success) {
+          adminToast(res.error, "error");
+        } else if (res.data) {
+          result = res.data;
+          setCoupons((prev) => [...prev, res.data!]);
+          logAudit("Coupons", "Create", `Created coupon '${res.data.code}'`);
+          adminToast("Coupon created", "success");
+        }
       }
-      return saved!;
+      if (!result && coupons.length > 0) {
+        result = coupons[0];
+      }
+      return result || ({} as AdminCoupon);
     },
-    [coupons, logAudit, adminToast, setCoupons]
+    [coupons, logAudit, adminToast]
   );
 
   const deleteCoupon = useCallback(
-    (id: string) => {
+    async (id: string) => {
+      const result = await adminDeleteCoupon(id);
+      if (!result.success) {
+        adminToast(result.error, "error");
+        return;
+      }
       setCoupons((prev) => prev.filter((c) => c.id !== id));
       logAudit("Coupons", "Delete", `Deleted coupon ${id}`);
       adminToast("Coupon deleted", "info");
     },
-    [logAudit, adminToast, setCoupons]
+    [logAudit, adminToast]
   );
 
-  // ---------------- Content & Festive Themes ----------------
-  const switchFestiveTheme = useCallback(
-    (themeId: FestiveTheme["id"]) => {
-      const match = SEED_FESTIVE_THEMES.find((t) => t.id === themeId);
-      setSettings((prev) => ({ ...prev, activeFestiveTheme: themeId }));
-      logAudit("Content", "Theme Change", `Switched storefront festive theme to '${match?.name || themeId}'`);
-      adminToast(`Theme switched to: ${match?.name || themeId}!`, "success");
-    },
-    [logAudit, adminToast, setSettings]
-  );
+  // Content & Festive theme
+  const switchFestiveTheme = useCallback((themeId: FestiveTheme["id"]) => {
+    setFestiveThemes((prev) =>
+      prev.map((t) => ({ ...t, active: t.id === themeId }))
+    );
+    logAudit("Content", "Theme Change", `Switched to festive theme ${themeId}`);
+    adminToast("Festive theme activated");
+  }, [logAudit, adminToast]);
 
   const saveBanner = useCallback(
-    (patch: Partial<AdminBanner>): AdminBanner => {
-      let saved: AdminBanner;
-      if (patch.id && banners.some((b) => b.id === patch.id)) {
-        setBanners((prev) =>
-          prev.map((b) => {
-            if (b.id === patch.id) {
-              saved = { ...b, ...patch } as AdminBanner;
-              return saved;
-            }
-            return b;
-          })
-        );
-        logAudit("Content", "Update", `Updated banner '${patch.title}'`);
+    async (patch: Partial<AdminBanner>): Promise<AdminBanner> => {
+      const result = await adminSaveBanner(patch);
+      if (result.success && result.data) {
+        const saved = result.data;
+        setBanners((prev) => {
+          const exists = prev.some((b) => b.id === saved.id);
+          if (exists) {
+            return prev.map((b) => (b.id === saved.id ? saved : b));
+          }
+          return [saved, ...prev];
+        });
+        logAudit("Content", "Update", `Saved banner ${patch.id || "new"}`);
         adminToast("Banner saved", "success");
-      } else {
-        const id = "ban_" + Math.random().toString(36).slice(2, 7);
-        saved = {
-          id,
-          title: patch.title || "New Banner",
-          subtitle: patch.subtitle || "",
-          badge: patch.badge || "Special Offer",
-          image: patch.image || "https://images.unsplash.com/photo-1566206091558-7f218b696731?auto=format&fit=crop&w=1600&q=80",
-          link: patch.link || "/products",
-          buttonText: patch.buttonText || "Shop Now",
-          active: true,
-          order: banners.length + 1,
-        };
-        setBanners((prev) => [...prev, saved]);
-        logAudit("Content", "Create", `Created hero banner '${saved.title}'`);
-        adminToast("Banner created", "success");
+        return saved;
       }
-      return saved!;
+      if (!result.success) adminToast(result.error, "error");
+      return banners[0] as AdminBanner;
     },
-    [banners, logAudit, adminToast, setBanners]
+    [banners, logAudit, adminToast]
   );
 
   const deleteBanner = useCallback(
-    (id: string) => {
+    async (id: string) => {
+      const result = await adminDeleteBanner(id);
+      if (!result.success) {
+        adminToast(result.error, "error");
+        return;
+      }
       setBanners((prev) => prev.filter((b) => b.id !== id));
       logAudit("Content", "Delete", `Deleted banner ${id}`);
-      adminToast("Banner removed", "info");
+      adminToast("Banner deleted", "info");
     },
-    [logAudit, adminToast, setBanners]
+    [logAudit, adminToast]
   );
 
   const saveAnnouncement = useCallback(
-    (text: string) => {
-      const id = "ann_" + Math.random().toString(36).slice(2, 7);
-      setAnnouncements((prev) => [...prev, { id, text, active: true }]);
-      logAudit("Content", "Create", `Added announcement: "${text.slice(0, 30)}..."`);
-      adminToast("Announcement added", "success");
+    async (text: string) => {
+      const result = await adminSaveAnnouncement({ text, active: true });
+      if (result.success && result.data) {
+        const saved = result.data;
+        setAnnouncements((prev) => [saved, ...prev]);
+        logAudit("Content", "Create", `Created announcement: ${text}`);
+        adminToast("Announcement created", "success");
+      } else if (!result.success) {
+        adminToast(result.error, "error");
+      }
     },
-    [logAudit, adminToast, setAnnouncements]
+    [logAudit, adminToast]
   );
 
-  const toggleAnnouncement = useCallback(
-    (id: string) => {
-      setAnnouncements((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, active: !a.active } : a))
-      );
-    },
-    [setAnnouncements]
-  );
+  const toggleAnnouncement = useCallback((id: string) => {
+    setAnnouncements((prev) =>
+      prev.map((a) => {
+        if (a.id === id) {
+          const active = !a.active;
+          logAudit("Content", "Update", `${active ? "Activated" : "Deactivated"} announcement ${id}`);
+          adminToast(`Announcement ${active ? "activated" : "deactivated"}`, "info");
+          return { ...a, active };
+        }
+        return a;
+      })
+    );
+  }, [logAudit, adminToast]);
 
   const deleteAnnouncement = useCallback(
-    (id: string) => {
+    async (id: string) => {
+      const result = await adminDeleteAnnouncement(id);
+      if (!result.success) {
+        adminToast(result.error, "error");
+        return;
+      }
       setAnnouncements((prev) => prev.filter((a) => a.id !== id));
+      logAudit("Content", "Delete", `Deleted announcement ${id}`);
       adminToast("Announcement deleted", "info");
     },
-    [adminToast, setAnnouncements]
+    [logAudit, adminToast]
   );
 
   const saveYouTubeVideo = useCallback(
-    (patch: Partial<YouTubeVideoItem>): YouTubeVideoItem => {
-      let saved: YouTubeVideoItem;
-      if (patch.id && youtubeVideos.some((v) => v.id === patch.id)) {
-        setYoutubeVideos((prev) =>
-          prev.map((v) => {
-            if (v.id === patch.id) {
-              saved = { ...v, ...patch } as YouTubeVideoItem;
-              return saved;
-            }
-            return v;
-          })
-        );
-        logAudit("Content", "Update", `Updated video '${patch.title}'`);
-        adminToast("Video updated", "success");
-      } else {
-        const id = "yt_" + Math.random().toString(36).slice(2, 7);
-        saved = {
-          id,
-          title: patch.title || "Miracle Collections Showcase",
-          videoId: patch.videoId || "dQw4w9WgXcQ",
-          thumbnail: patch.thumbnail || "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=480&q=80",
-          duration: patch.duration || "3:30",
-          views: "1.2K",
-          active: true,
-        };
-        setYoutubeVideos((prev) => [...prev, saved]);
-        logAudit("Content", "Create", `Added YouTube video strip: '${saved.title}'`);
-        adminToast("Video item added", "success");
+    async (patch: Partial<YouTubeVideoItem>): Promise<YouTubeVideoItem> => {
+      const result = await adminSaveYoutubeVideo(patch);
+      if (result.success && result.data) {
+        const saved = result.data;
+        setYoutubeVideos((prev) => {
+          const exists = prev.some((v) => v.id === saved.id);
+          if (exists) {
+            return prev.map((v) => (v.id === saved.id ? saved : v));
+          }
+          return [saved, ...prev];
+        });
+        logAudit("Content", "Update", `Saved YouTube video ${patch.id || "new"}`);
+        adminToast("Video saved", "success");
+        return saved;
       }
-      return saved!;
+      if (!result.success) adminToast(result.error, "error");
+      return youtubeVideos[0] as YouTubeVideoItem;
     },
-    [youtubeVideos, logAudit, adminToast, setYoutubeVideos]
+    [youtubeVideos, logAudit, adminToast]
   );
 
   const deleteYouTubeVideo = useCallback(
-    (id: string) => {
+    async (id: string) => {
+      const result = await adminDeleteYoutubeVideo(id);
+      if (!result.success) {
+        adminToast(result.error, "error");
+        return;
+      }
       setYoutubeVideos((prev) => prev.filter((v) => v.id !== id));
-      adminToast("Video removed", "info");
+      logAudit("Content", "Delete", `Deleted YouTube video ${id}`);
+      adminToast("Video deleted", "info");
     },
-    [adminToast, setYoutubeVideos]
+    [logAudit, adminToast]
   );
 
-  // ---------------- Settings ----------------
+  // Settings
   const saveSettings = useCallback(
-    (patch: Partial<AdminSettings>) => {
-      setSettings((prev) => ({ ...prev, ...patch }));
-      logAudit("Settings", "Update", "Updated store settings (UPI, Shipping, GST, Timeouts)");
-      adminToast("Store settings saved successfully", "success");
+    async (patch: Partial<AdminSettings>) => {
+      if (settings) {
+        const result = await adminUpdateSettings({ ...settings, ...patch });
+        if (!result.success) {
+          adminToast(result.error, "error");
+          return;
+        }
+        setSettings((prev) => (prev ? { ...prev, ...patch } : null));
+        logAudit("Settings", "Update", `Updated settings`);
+        adminToast("Settings saved", "success");
+      }
     },
-    [logAudit, adminToast, setSettings]
+    [settings, logAudit, adminToast]
   );
 
-  // ---------------- Staff ----------------
+  // Staff
   const addStaff = useCallback(
-    (member: Omit<StaffMember, "id" | "lastActive">) => {
-      const id = "st_" + Math.random().toString(36).slice(2, 7);
-      const newStaff: StaffMember = {
-        ...member,
-        id,
-        lastActive: "Just added",
-      };
-      setStaff((prev) => [...prev, newStaff]);
-      logAudit("Staff", "Create", `Added staff member '${newStaff.name}' (${newStaff.role})`);
-      adminToast(`Staff member ${newStaff.name} added`, "success");
+    async (member: Omit<StaffMember, "id" | "createdAt" | "updatedAt">) => {
+      const result = await adminAddStaff(member);
+      if (result.success && result.data) {
+        const saved = result.data;
+        setStaff((prev) => [...prev, saved]);
+        logAudit("Staff", "Create", `Added staff member ${member.name}`);
+        adminToast("Staff member added", "success");
+      } else if (!result.success) {
+        adminToast(result.error, "error");
+      }
     },
-    [logAudit, adminToast, setStaff]
+    [logAudit, adminToast]
   );
 
   const deleteStaff = useCallback(
-    (id: string) => {
+    async (id: string) => {
+      const result = await adminDeleteStaff(id);
+      if (!result.success) {
+        adminToast(result.error, "error");
+        return;
+      }
       setStaff((prev) => prev.filter((s) => s.id !== id));
-      logAudit("Staff", "Delete", `Removed staff member ${id}`);
-      adminToast("Staff member removed", "info");
+      if (currentStaff?.id === id) {
+        setCurrentStaff(staff[0] || null);
+      }
+      logAudit("Staff", "Delete", `Deleted staff member ${id}`);
+      adminToast("Staff member deleted", "info");
     },
-    [logAudit, adminToast, setStaff]
+    [currentStaff, staff, logAudit, adminToast]
   );
 
-  // ---------------- Export & Reset ----------------
+  // Utilities
   const exportToCsv = useCallback((data: Record<string, unknown>[], filename: string) => {
-    if (!data || data.length === 0) {
-      alert("No data available to export");
+    if (data.length === 0) {
+      adminToast("No data to export", "error");
       return;
     }
     const headers = Object.keys(data[0]);
-    const csvContent =
-      "data:text/csv;charset=utf-8," +
-      [
-        headers.join(","),
-        ...data.map((row) =>
-          headers
-            .map((field) => {
-              const val = row[field];
-              if (val === null || val === undefined) return '""';
-              if (typeof val === "object") return `"${JSON.stringify(val).replace(/"/g, '""')}"`;
-              return `"${String(val).replace(/"/g, '""')}"`;
-            })
-            .join(",")
-        ),
-      ].join("\n");
-
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = [
+      headers.join(","),
+      ...data.map((row) => headers.map((h) => JSON.stringify(row[h] ?? "")).join(",")),
+    ].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `${filename}_${new Date().toISOString().split("T")[0]}.csv`);
-    document.body.appendChild(link);
+    link.href = url;
+    link.download = `${filename}.csv`;
     link.click();
-    document.body.removeChild(link);
-  }, []);
+    URL.revokeObjectURL(url);
+    logAudit("Reports", "Export", `Exported ${filename}.csv`);
+    adminToast("Export successful");
+  }, [logAudit, adminToast]);
 
   const resetToSampleData = useCallback(() => {
-    storeResetProducts();
-    setCategories(SEED_CATEGORIES);
-    setFilters(SEED_FILTERS);
-    setOrders(SEED_ORDERS);
-    setPayments(SEED_PAYMENTS);
-    setStockLedger(SEED_STOCK_LEDGER);
-    setCustomers(SEED_CUSTOMERS);
-    setCoupons(SEED_COUPONS);
-    setBanners(SEED_BANNERS);
-    setAnnouncements(SEED_ANNOUNCEMENTS);
-    setYoutubeVideos(SEED_YOUTUBE_VIDEOS);
-    setSettings(SEED_SETTINGS);
-    setStaff(SEED_STAFF);
-    setAuditLogs(SEED_AUDIT_LOGS);
-    adminToast("All admin modules reset to standard PRD seed data", "info");
-  }, [
-    adminToast,
-    storeResetProducts,
-    setCategories,
-    setFilters,
-    setOrders,
-    setPayments,
-    setStockLedger,
-    setCustomers,
-    setCoupons,
-    setBanners,
-    setAnnouncements,
-    setYoutubeVideos,
-    setSettings,
-    setStaff,
-    setAuditLogs,
-  ]);
+    if (confirm("This will reset all admin data to defaults. Are you sure?")) {
+      window.location.reload();
+    }
+  }, []);
 
   const value = useMemo<AdminContextValue>(
     () => ({
@@ -941,44 +961,39 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       banners,
       announcements,
       youtubeVideos,
-      festiveThemes: SEED_FESTIVE_THEMES,
-      settings,
+      festiveThemes,
+      settings: settings || {} as AdminSettings,
       staff,
-      currentStaff,
+      currentStaff: currentStaff || {} as StaffMember,
       auditLogs,
       toasts,
-
+      loading,
       pendingPaymentCount,
       lowStockCount,
       totalRevenue,
       todaySales,
-
       adminToast,
       setCurrentStaff,
       logAudit,
-
       verifyPayment,
       rejectPayment,
       updateOrderStatus,
       addInternalOrderNote,
-
       saveProduct,
       deleteProduct,
       toggleProductStatus,
-
       adjustStock,
       bulkUpdateStock,
-
       saveCategory,
       deleteCategory,
+      subcategories,
+      saveSubcategory,
+      deleteSubcategory,
       saveFilter,
       deleteFilter,
-
       toggleCustomerBlock,
-
       saveCoupon,
       deleteCoupon,
-
       switchFestiveTheme,
       saveBanner,
       deleteBanner,
@@ -987,12 +1002,9 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       deleteAnnouncement,
       saveYouTubeVideo,
       deleteYouTubeVideo,
-
       saveSettings,
-
       addStaff,
       deleteStaff,
-
       exportToCsv,
       resetToSampleData,
     }),
@@ -1008,16 +1020,19 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       banners,
       announcements,
       youtubeVideos,
+      festiveThemes,
       settings,
       staff,
       currentStaff,
       auditLogs,
       toasts,
+      loading,
       pendingPaymentCount,
       lowStockCount,
       totalRevenue,
       todaySales,
       adminToast,
+      setCurrentStaff,
       logAudit,
       verifyPayment,
       rejectPayment,
@@ -1030,6 +1045,9 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       bulkUpdateStock,
       saveCategory,
       deleteCategory,
+      subcategories,
+      saveSubcategory,
+      deleteSubcategory,
       saveFilter,
       deleteFilter,
       toggleCustomerBlock,
@@ -1054,7 +1072,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;
 }
 
-export function useAdmin() {
+export function useAdmin(): AdminContextValue {
   const ctx = useContext(AdminContext);
   if (!ctx) throw new Error("useAdmin must be used within an AdminProvider");
   return ctx;

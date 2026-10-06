@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { GitCompareArrows, ShoppingCart, Trash2, X } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
-import { getProductById } from "@/data/products";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { Rating } from "@/components/ui/Rating";
@@ -12,10 +11,11 @@ import { StockBadge } from "@/components/product/StockBadge";
 import { discountPercent, handleImageError } from "@/lib/utils";
 
 export default function ComparePage() {
-  const { compare, toggleCompare, clearCompare, addToCart, toast, hydrated } = useStore();
-  const products = compare.map(getProductById).filter((p): p is NonNullable<typeof p> => Boolean(p));
+  const { compare, toggleCompare, clearCompare, addToCart, toast, hydrated, products } = useStore();
+  const getProductById = (id: string) => products.find((p: any) => p.id === id);
+  const comparedProducts = compare.map(getProductById).filter((p): p is NonNullable<typeof p> => Boolean(p));
 
-  if (hydrated && products.length === 0) {
+  if (hydrated && comparedProducts.length === 0) {
     return (
       <main className="mx-auto max-w-3xl flex-1 px-4 py-10 sm:px-6">
         <EmptyState
@@ -32,7 +32,7 @@ export default function ComparePage() {
     );
   }
 
-  const fields: { label: string; render: (p: NonNullable<typeof products[number]>) => React.ReactNode }[] = [
+  const fields: { label: string; render: (p: NonNullable<typeof comparedProducts[number]>) => React.ReactNode }[] = [
     {
       label: "Price",
       render: (p) => <PriceDisplay price={p.price} mrp={p.mrp} size="md" />,
@@ -58,7 +58,7 @@ export default function ComparePage() {
     <main className="mx-auto max-w-7xl flex-1 px-4 py-6 sm:px-6">
       <div className="mb-5 flex items-center justify-between">
         <h1 className="text-xl font-extrabold text-black sm:text-2xl">
-          Compare <span className="text-base font-medium text-neutral-400">({products.length} products)</span>
+          Compare <span className="text-base font-medium text-neutral-400">({comparedProducts.length} products)</span>
         </h1>
         <Button variant="outline" size="sm" onClick={clearCompare}>
           <Trash2 size={14} /> Clear All
@@ -70,7 +70,7 @@ export default function ComparePage() {
           <thead>
             <tr className="border-b border-neutral-200">
               <th className="w-32 p-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400" />
-              {products.map((p) => (
+              {comparedProducts.map((p) => (
                 <th key={p.id} className="p-3 text-left align-top">
                   <div className="relative">
                     <Link href={`/products/${p.slug}`}>
@@ -96,14 +96,14 @@ export default function ComparePage() {
             {fields.map((f, i) => (
               <tr key={f.label} className={i % 2 ? "bg-neutral-50" : ""}>
                 <td className="p-3 font-semibold text-neutral-500">{f.label}</td>
-                {products.map((p) => (
+                {comparedProducts.map((p) => (
                   <td key={p.id} className="p-3">{f.render(p)}</td>
                 ))}
               </tr>
             ))}
             <tr>
               <td className="p-3 font-semibold text-neutral-500">Specifications</td>
-              {products.map((p) => (
+              {comparedProducts.map((p) => (
                 <td key={p.id} className="p-3">
                   <ul className="space-y-1 text-xs text-neutral-600">
                     {p.specifications.slice(0, 4).map((s) => (
@@ -117,7 +117,7 @@ export default function ComparePage() {
             </tr>
             <tr>
               <td className="p-3" />
-              {products.map((p) => (
+              {comparedProducts.map((p) => (
                 <td key={p.id} className="p-3">
                   <Button
                     size="sm"

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Check, Plus, ShoppingBag, Sparkles } from "lucide-react";
-import { getProductById } from "@/data/products";
 import { useStore } from "@/context/StoreContext";
 import { formatPrice, handleImageError } from "@/lib/utils";
 
@@ -42,7 +41,9 @@ const LOOKS: LookBundle[] = [
 export function CompleteTheLook() {
   const [activeLookId, setActiveLookId] = useState<string>("women-festive");
   const [added, setAdded] = useState(false);
-  const { addToCart, toast } = useStore();
+  const { addToCart, toast, products } = useStore();
+
+  const getProductById = (id: string) => products.find((p: any) => p.id === id);
 
   const currentLook = LOOKS.find((l) => l.id === activeLookId) || LOOKS[0];
   const items = currentLook.productIds

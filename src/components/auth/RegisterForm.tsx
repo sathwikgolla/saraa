@@ -47,20 +47,25 @@ export function RegisterForm({ next }: { next: string }) {
     return Object.keys(e).length === 0;
   };
 
-  const submit = (ev: React.FormEvent) => {
+  const submit = async (ev: React.FormEvent) => {
     ev.preventDefault();
     if (!validate()) return;
     setLoading(true);
-    window.setTimeout(() => {
-      const result = register({ name, email, mobile, password });
-      setLoading(false);
-      if (result.ok) {
-        toast("Account created successfully");
-        router.push(next);
-      } else {
-        setErrors({ form: result.error });
+    const result = await register({ name, email, mobile, password });
+    setLoading(false);
+    if (result.ok) {
+      // With Supabase "Confirm email" enabled there is no session yet, so the
+      // user is not actually signed in — tell them to confirm instead of
+      // pretending they are logged in.
+      if (result.needsEmailConfirmation) {
+        toast("Account created. Please check your email to confirm before signing in.", "info");
+        return;
       }
-    }, 700);
+      toast("Account created successfully");
+      router.push(next);
+    } else {
+      setErrors({ form: result.error });
+    }
   };
 
   const inputCls =

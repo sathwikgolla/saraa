@@ -4,10 +4,21 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CreditCard, Globe, Mail, MessageCircle, RotateCcw, Send, ShieldCheck, Truck } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
-import { categories } from "@/data/categories";
+import { useStore } from "@/context/StoreContext";
 
 export function Footer() {
   const pathname = usePathname();
+  const { products } = useStore();
+  
+  // Extract unique categories from products
+  const categories = Array.from(
+    new Set(products.map((p: any) => (p as any).categoryId))
+  ).map((id, i) => ({
+    id,
+    name: id.charAt(0).toUpperCase() + id.slice(1),
+    slug: id.toLowerCase(),
+  }));
+  
   if (pathname?.startsWith("/admin")) return null;
   return (
     <footer className="mt-16 border-t border-neutral-200 bg-neutral-50 pb-20 lg:pb-0">

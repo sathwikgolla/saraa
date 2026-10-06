@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Heart, ShoppingCart, Trash2 } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
-import { getProductById } from "@/data/products";
 import { ProductCard } from "@/components/product/ProductCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
@@ -12,10 +11,12 @@ import { Button } from "@/components/ui/Button";
 type WishlistSort = "recent" | "price-low" | "price-high" | "rating";
 
 export default function WishlistPage() {
-  const { wishlist, hydrated, moveToCart, toggleWishlist } = useStore();
+  const { wishlist, hydrated, moveToCart, toggleWishlist, products } = useStore();
   const [sort, setSort] = useState<WishlistSort>("recent");
 
-  const products = useMemo(() => {
+  const getProductById = (id: string) => products.find((p: any) => p.id === id);
+
+  const wishlistProducts = useMemo(() => {
     const list = wishlist
       .map((id, index) => ({ p: getProductById(id), index }))
       .filter((x): x is { p: NonNullable<ReturnType<typeof getProductById>>; index: number } => Boolean(x.p));
@@ -34,9 +35,9 @@ export default function WishlistPage() {
         sorted.sort((a, b) => a.index - b.index);
     }
     return sorted.map((x) => x.p);
-  }, [wishlist, sort]);
+  }, [wishlist, sort, products]);
 
-  if (hydrated && products.length === 0) {
+  if (hydrated && wishlistProducts.length === 0) {
     return (
       <main className="mx-auto max-w-3xl flex-1 px-4 py-10 sm:px-6">
         <EmptyState
@@ -57,7 +58,7 @@ export default function WishlistPage() {
     <main className="mx-auto max-w-7xl flex-1 px-4 py-6 sm:px-6">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-extrabold text-black sm:text-2xl">
-          Your Wishlist <span className="text-base font-medium text-neutral-400">— {products.length} Items</span>
+          Your Wishlist <span className="text-base font-medium text-neutral-400">— {wishlistProducts.length} Items</span>
         </h1>
         <select
           value={sort}
@@ -73,7 +74,7 @@ export default function WishlistPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-4">
-        {products.map((p) => (
+        {wishlistProducts.map((p) => (
           <div key={p.id} className="flex flex-col">
             <ProductCard product={p} showAddToCart={false} />
             <div className="-mt-1 grid grid-cols-2 gap-2 rounded-b-lg border border-t-0 border-neutral-200 bg-white p-2.5">

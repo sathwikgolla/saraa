@@ -6,12 +6,13 @@ import { useStore } from "@/context/StoreContext";
 import { CartItem } from "@/components/product/CartItem";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
-import { getProductById } from "@/data/products";
-import { DELIVERY_CHARGE, FREE_DELIVERY_THRESHOLD } from "@/data/products";
 import { formatPrice } from "@/lib/utils";
 
+const DELIVERY_CHARGE = 50;
+const FREE_DELIVERY_THRESHOLD = 499;
+
 export default function CartPage() {
-  const { cart, hydrated } = useStore();
+  const { cart, hydrated, products } = useStore();
 
   if (hydrated && cart.length === 0) {
     return (
@@ -29,6 +30,7 @@ export default function CartPage() {
     );
   }
 
+  const getProductById = (id: string) => products.find((p: any) => p.id === id);
   const items = cart
     .map((item) => ({ item, product: getProductById(item.productId) }))
     .filter((x) => x.product);

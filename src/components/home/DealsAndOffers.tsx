@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, BadgePercent, Check, Copy, Sparkles, Tag, Truck } from "lucide-react";
-import { products } from "@/data/products";
+import { useStore } from "@/context/StoreContext";
 import { ProductCard } from "@/components/product/ProductCard";
 import { discountPercent } from "@/lib/utils";
 
@@ -48,6 +48,7 @@ const ACTIVE_COUPONS = [
 
 export function DealsAndOffers() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const { products } = useStore();
 
   const handleCopy = (code: string) => {
     navigator.clipboard?.writeText(code);

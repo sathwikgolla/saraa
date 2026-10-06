@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
-  Edit2,
   Filter,
   Layers,
   Plus,
+  Tags,
   Trash2,
   X,
 } from "lucide-react";
@@ -20,11 +20,16 @@ export default function AdminCategoriesPage() {
     filters,
     saveCategory,
     deleteCategory,
+    saveSubcategory,
+    deleteSubcategory,
     deleteFilter,
   } = useAdmin();
 
   const [editingFilter, setEditingFilter] = useState<CategoryFilter | null>(null);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+
+  // Inline "add subcategory" inputs, keyed by category id.
+  const [newSubName, setNewSubName] = useState<Record<string, string>>({});
 
   // Category form state
   const [editingCat, setEditingCat] = useState<AdminCategory | null>(null);
@@ -33,7 +38,11 @@ export default function AdminCategoriesPage() {
   const [catSlug, setCatSlug] = useState("");
   const [catImage, setCatImage] = useState("");
   const [catDesc, setCatDesc] = useState("");
-  const [catSubcats, setCatSubcats] = useState("");
+
+  const totalSubcategories = useMemo(
+    () => categories.reduce((sum, c) => sum + (c.subcategories?.length ?? 0), 0),
+    [categories]
+  );
 
   const handleOpenCatModal = (cat?: AdminCategory) => {
     if (cat) {
@@ -42,14 +51,12 @@ export default function AdminCategoriesPage() {
       setCatSlug(cat.slug);
       setCatImage(cat.image);
       setCatDesc(cat.description);
-      setCatSubcats(cat.subcategories.join(", "));
     } else {
       setEditingCat(null);
       setCatName("");
       setCatSlug("");
       setCatImage("https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80");
       setCatDesc("");
-      setCatSubcats("");
     }
     setIsCatModalOpen(true);
   };
@@ -64,13 +71,18 @@ export default function AdminCategoriesPage() {
       slug: catSlug.trim() || catName.toLowerCase().replace(/[^a-z0-9]/g, "-"),
       image: catImage.trim(),
       description: catDesc.trim(),
-      subcategories: catSubcats
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
+      // Preserve the existing subcategory list; it is edited in the panel below.
+      subcategories: editingCat?.subcategories ?? [],
     });
 
     setIsCatModalOpen(false);
+  };
+
+  const handleAddSub = (categoryId: string) => {
+    const name = (newSubName[categoryId] ?? "").trim();
+    if (!name) return;
+    saveSubcategory({ categoryId, name });
+    setNewSubName((prev) => ({ ...prev, [categoryId]: "" }));
   };
 
   return (
@@ -150,14 +162,18 @@ export default function AdminCategoriesPage() {
                       Sub-categories:
                     </p>
                     <div className="flex flex-wrap gap-1">
-                      {c.subcategories.map((sc, i) => (
-                        <span
-                          key={i}
-                          className="rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] text-neutral-700 font-medium"
-                        >
-                          {sc}
-                        </span>
-                      ))}
+                      {(c.subcategories?.length ?? 0) === 0 ? (
+                        <span className="text-[10px] text-neutral-400">None yet</span>
+                      ) : (
+                        c.subcategories.map((sc, i) => (
+                          <span
+                            key={i}
+                            className="rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] text-neutral-700 font-medium"
+                          >
+                            {sc}
+                          </span>
+                        ))
+                      )}
                     </div>
                   </div>
                 </div>
@@ -183,6 +199,86 @@ export default function AdminCategoriesPage() {
                     </button>
                   )}
                 </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Section 1b: Subcategories (stored on the category's `subcategories` array) */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-sm font-bold text-black uppercase tracking-wider">
+            Subcategories ({totalSubcategories})
+          </h2>
+          <p className="text-xs text-neutral-500">
+            The third level of the catalog, stored on each category. On the storefront a
+            product is filtered by its <span className="font-medium text-black">category</span>,{" "}
+            <span className="font-medium text-black">audience</span> (Men / Women / Kids) and this{" "}
+            <span className="font-medium text-black">subcategory</span>. The audience-specific
+            suggestions (e.g. Heels for Women&apos;s Footwear) are applied automatically.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          {categories.map((cat) => (
+            <div
+              key={cat.id}
+              className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm space-y-4"
+            >
+              <div className="flex items-center gap-2">
+                <Tags className="h-4 w-4 text-neutral-400" />
+                <h3 className="text-sm font-bold text-black">{cat.name}</h3>
+              </div>
+
+              <div className="flex flex-wrap gap-1.5">
+                {(cat.subcategories?.length ?? 0) === 0 ? (
+                  <span className="text-[11px] text-neutral-400">None yet</span>
+                ) : (
+                  cat.subcategories.map((s) => (
+                    <span
+                      key={s}
+                      className="group/tag inline-flex items-center gap-1 rounded-md border border-neutral-200 bg-white px-2 py-1 text-[11px] font-medium text-neutral-700"
+                    >
+                      {s}
+                      <button
+                        onClick={() => {
+                          if (confirm(`Delete subcategory '${s}'?`)) {
+                            deleteSubcategory(cat.id, s);
+                          }
+                        }}
+                        className="text-neutral-300 hover:text-rose-600 transition"
+                        title="Delete subcategory"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 max-w-md">
+                <input
+                  type="text"
+                  value={newSubName[cat.id] ?? ""}
+                  onChange={(e) =>
+                    setNewSubName((prev) => ({ ...prev, [cat.id]: e.target.value }))
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddSub(cat.id);
+                    }
+                  }}
+                  placeholder={`Add subcategory to ${cat.name}…`}
+                  className="flex-1 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs text-black placeholder-neutral-400 focus:border-black focus:outline-none"
+                />
+                <button
+                  onClick={() => handleAddSub(cat.id)}
+                  className="flex items-center gap-1 rounded-lg bg-black px-3 py-1.5 text-xs font-semibold text-white hover:bg-neutral-800 transition"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Add
+                </button>
               </div>
             </div>
           ))}
@@ -330,19 +426,6 @@ export default function AdminCategoriesPage() {
                   onChange={(e) => setCatDesc(e.target.value)}
                   placeholder="Brief tagline for category..."
                   className="w-full rounded-lg border border-neutral-300 bg-white p-2.5 text-black placeholder-neutral-400 focus:border-black focus:outline-none"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-semibold text-neutral-700">
-                  Sub-categories (comma separated)
-                </label>
-                <input
-                  type="text"
-                  value={catSubcats}
-                  onChange={(e) => setCatSubcats(e.target.value)}
-                  placeholder="e.g. Kurtas, Sarees, Dresses, Loungewear"
-                  className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-black placeholder-neutral-400 focus:border-black focus:outline-none"
                 />
               </div>
 

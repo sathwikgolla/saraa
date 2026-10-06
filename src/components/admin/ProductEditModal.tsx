@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Image as ImageIcon,
   Layers,
@@ -19,13 +19,16 @@ interface ProductEditModalProps {
 }
 
 export function ProductEditModal({ product, onClose }: ProductEditModalProps) {
-  const { categories, saveProduct } = useAdmin();
+  const { categories, subcategories, saveProduct } = useAdmin();
 
   const [name, setName] = useState(product?.name || "");
   const [slug, setSlug] = useState(product?.slug || "");
   const [brand, setBrand] = useState(product?.brand || "Miracle Collections");
   const [categoryId, setCategoryId] = useState(product?.categoryId || categories[0]?.id || "clothing");
-  const [subCategory, setSubCategory] = useState(product?.subCategory || "General");
+  const [gender, setGender] = useState<"men" | "women" | "kids" | "unisex" | "">(
+    product?.gender || "men"
+  );
+  const [subCategory, setSubCategory] = useState(product?.subCategory || "");
   const [price, setPrice] = useState(product?.price || 1299);
   const [mrp, setMrp] = useState(product?.mrp || 2499);
   const [costPrice, setCostPrice] = useState(product?.costPrice || 600);
@@ -52,6 +55,28 @@ export function ProductEditModal({ product, onClose }: ProductEditModalProps) {
       { label: "Care Instructions", value: "Machine Wash Cold" },
     ]
   );
+
+  // Dependent sub-category options for the selected category + audience.
+  // Derived from the category rows + shared taxonomy (no subcategories table).
+  const subcategoryOptions = useMemo(() => {
+    const forCategory = subcategories.filter((s) => s.categoryId === categoryId);
+    const byAudience =
+      gender === "men" || gender === "women" || gender === "kids"
+        ? forCategory.filter((s) => s.gender === gender)
+        : forCategory;
+    const seen = new Set<string>();
+    return byAudience.filter((s) =>
+      seen.has(s.name) ? false : (seen.add(s.name), true)
+    );
+  }, [subcategories, categoryId, gender]);
+
+  // Keep the chosen sub-category valid whenever the category/audience changes.
+  useEffect(() => {
+    if (subcategoryOptions.length === 0) return;
+    if (!subcategoryOptions.some((s) => s.name === subCategory)) {
+      setSubCategory(subcategoryOptions[0].name);
+    }
+  }, [subcategoryOptions, subCategory]);
 
   useEffect(() => {
     if (!product && name) {
@@ -148,6 +173,7 @@ export function ProductEditModal({ product, onClose }: ProductEditModalProps) {
       brand: brand.trim(),
       categoryId,
       subCategory,
+      gender,
       price: Number(price),
       mrp: Number(mrp),
       costPrice: Number(costPrice),
@@ -217,7 +243,7 @@ export function ProductEditModal({ product, onClose }: ProductEditModalProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             <div className="space-y-1">
               <label className="font-semibold text-neutral-700">Category</label>
               <select
@@ -234,14 +260,39 @@ export function ProductEditModal({ product, onClose }: ProductEditModalProps) {
             </div>
 
             <div className="space-y-1">
+              <label className="font-semibold text-neutral-700">Audience</label>
+              <select
+                value={gender}
+                onChange={(e) =>
+                  setGender(e.target.value as "men" | "women" | "kids" | "unisex" | "")
+                }
+                className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-black text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
+              >
+                <option value="">Unspecified</option>
+                <option value="men">Men</option>
+                <option value="women">Women</option>
+                <option value="kids">Kids</option>
+                <option value="unisex">Unisex</option>
+              </select>
+            </div>
+
+            <div className="space-y-1">
               <label className="font-semibold text-neutral-700">Sub-category</label>
-              <input
-                type="text"
+              <select
                 value={subCategory}
                 onChange={(e) => setSubCategory(e.target.value)}
-                placeholder="e.g. Kurta Sets"
-                className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-black text-xs placeholder:text-neutral-400 focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
-              />
+                className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-black text-xs focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
+              >
+                {subcategoryOptions.length === 0 ? (
+                  <option value="">No subcategories for this selection</option>
+                ) : (
+                  subcategoryOptions.map((s) => (
+                    <option key={s.id} value={s.name}>
+                      {s.name}
+                    </option>
+                  ))
+                )}
+              </select>
             </div>
 
             <div className="space-y-1">

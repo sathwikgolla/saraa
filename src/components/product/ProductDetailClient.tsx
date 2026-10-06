@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BadgeCheck,
   Bell,
@@ -16,7 +16,6 @@ import {
   Zap,
 } from "lucide-react";
 import type { Product } from "@/lib/types";
-import { relatedProducts } from "@/data/products";
 import { useStore } from "@/context/StoreContext";
 import { Button } from "@/components/ui/Button";
 import { PriceDisplay } from "@/components/ui/PriceDisplay";
@@ -39,6 +38,7 @@ export function ProductDetailClient({ product }: { product: Product }) {
     isPriceAlerted,
     togglePriceAlert,
     addRecentlyViewed,
+    products,
   } = useStore();
   const [qty, setQty] = useState(1);
   const [color, setColor] = useState<string | undefined>(
@@ -50,6 +50,12 @@ export function ProductDetailClient({ product }: { product: Product }) {
   const wished = isWishlisted(product.id);
   const priceAlerted = isPriceAlerted(product.id);
   const pct = discountPercent(product.mrp, product.price);
+
+  const relatedProducts = useMemo(() => {
+    return products
+      .filter((p: any) => p.id !== product.id && (p as any).categoryId === (product as any).categoryId)
+      .slice(0, 6);
+  }, [products, product.id, (product as any).categoryId]);
 
   useEffect(() => {
     addRecentlyViewed(product.id);
@@ -332,7 +338,7 @@ export function ProductDetailClient({ product }: { product: Product }) {
           <div className="sticky top-40 rounded-lg border border-neutral-200 p-5">
             <h3 className="mb-3 text-sm font-bold text-black">Related products</h3>
             <div className="space-y-3">
-              {relatedProducts(product).slice(0, 3).map((p) => (
+              {relatedProducts.slice(0, 3).map((p: any) => (
                 <Link
                   key={p.id}
                   href={`/products/${p.slug}`}
@@ -364,7 +370,7 @@ export function ProductDetailClient({ product }: { product: Product }) {
           You may also like
         </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-4">
-          {relatedProducts(product).map((p) => (
+          {relatedProducts.map((p: any) => (
             <ProductCard key={p.id} product={p} />
           ))}
         </div>

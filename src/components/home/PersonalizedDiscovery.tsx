@@ -4,18 +4,19 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { ArrowRight, HeartHandshake, Sparkles } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
-import { products, getProductById } from "@/data/products";
 import { ProductCard } from "@/components/product/ProductCard";
 import { RecentlyViewed } from "@/components/home/RecentlyViewed";
 
 export function PersonalizedDiscovery() {
-  const { recentlyViewed, wishlist, cart, hydrated } = useStore();
+  const { recentlyViewed, wishlist, cart, hydrated, products } = useStore();
+
+  const getProductById = (id: string) => products.find((p: any) => p.id === id);
 
   const { picks, isPersonalized } = useMemo(() => {
     // Consistent fallback for SSR and initial guest view
     const defaultPicks = [...products]
-      .filter((p) => p.rating >= 4.3)
-      .sort((a, b) => b.reviews - a.reviews)
+      .filter((p: any) => p.rating >= 4.3)
+      .sort((a: any, b: any) => b.reviews - a.reviews)
       .slice(0, 4);
 
     if (!hydrated) {
@@ -35,15 +36,15 @@ export function PersonalizedDiscovery() {
       const cartProducts = cartIds.map(getProductById).filter((p): p is NonNullable<typeof p> => Boolean(p));
 
       const affinityCategories = new Set([
-        ...viewedProducts.map((p) => p.categoryId),
-        ...wishedProducts.map((p) => p.categoryId),
-        ...cartProducts.map((p) => p.categoryId),
+        ...viewedProducts.map((p: any) => p.categoryId),
+        ...wishedProducts.map((p: any) => p.categoryId),
+        ...cartProducts.map((p: any) => p.categoryId),
       ]);
 
       const excludeIds = new Set([...viewed, ...wished, ...cartIds]);
       const matched = products
-        .filter((p) => !excludeIds.has(p.id) && affinityCategories.has(p.categoryId))
-        .sort((a, b) => b.rating - a.rating)
+        .filter((p: any) => !excludeIds.has(p.id) && affinityCategories.has(p.categoryId))
+        .sort((a: any, b: any) => b.rating - a.rating)
         .slice(0, 4);
 
       if (matched.length > 0) {
@@ -53,12 +54,12 @@ export function PersonalizedDiscovery() {
 
     // Default for guest / new users: Popular picks
     const popularPicks = [...products]
-      .filter((p) => p.rating >= 4.3)
-      .sort((a, b) => b.reviews - a.reviews)
+      .filter((p: any) => p.rating >= 4.3)
+      .sort((a: any, b: any) => b.reviews - a.reviews)
       .slice(0, 4);
 
     return { picks: popularPicks, isPersonalized: false };
-  }, [recentlyViewed, wishlist, cart, hydrated]);
+  }, [recentlyViewed, wishlist, cart, hydrated, products]);
 
   return (
     <div className="space-y-12">

@@ -4,6 +4,8 @@ export interface Category {
   slug: string;
   image: string;
   description: string;
+  subcategories?: string[];
+  active?: boolean;
 }
 
 export interface Specification {
@@ -20,6 +22,8 @@ export interface Review {
   date: string;
   verified: boolean;
 }
+
+export type Gender = "men" | "women" | "kids" | "unisex";
 
 export interface ProductVariant {
   id: string;
@@ -39,6 +43,8 @@ export interface Product {
   description: string;
   categoryId: string;
   subCategory?: string;
+  /** Audience the product belongs to. Optional for backwards compatibility; empty values are inferred from the name. */
+  gender?: Gender;
   price: number; // selling price
   mrp: number; // original price
   costPrice?: number;
@@ -118,6 +124,19 @@ export interface MockUser extends User {
 export interface AuthResult {
   ok: boolean;
   error?: string;
+  /**
+   * True when sign-up succeeded but Supabase requires email confirmation before
+   * a session exists ("Confirm email" enabled on the project). Callers should
+   * prompt the user to confirm rather than assuming they are logged in.
+   */
+  needsEmailConfirmation?: boolean;
+  /**
+   * True when the signed-in account is a Super Admin (`profiles.role = 'admin'`).
+   * Used only to choose the landing route after login. It is NOT a security
+   * boundary — every privileged operation is re-verified on the server via
+   * `requireAdmin()`.
+   */
+  isAdmin?: boolean;
 }
 
 export interface Address {

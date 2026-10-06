@@ -4,17 +4,24 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { RotateCcw, SlidersHorizontal, X } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
-import { getCategory } from "@/data/categories";
+import {
+  GENDER_LABELS,
+  genderCollectionTitle,
+  isGender,
+  matchesGender,
+} from "@/lib/gender";
 import { ProductGrid } from "@/components/product/ProductGrid";
 import {
   DEFAULT_FILTERS,
   FilterSidebar,
   PRICE_MAX,
   type Filters,
+  type SubcategoryOptionItem,
 } from "@/components/product/FilterSidebar";
 import { SortDropdown, VALID_SORTS, type SortOption } from "@/components/product/SortDropdown";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
+import type { Gender } from "@/lib/types";
 import { discountPercent } from "@/lib/utils";
 
 type ParamValue = string | number | string[] | undefined;
@@ -36,6 +43,8 @@ function toParams(filters: Filters, sort: SortOption, query: string): Record<str
   return {
     q: query || undefined,
     category: filters.category === "all" ? undefined : filters.category,
+    gender: filters.gender || undefined,
+    subcategory: filters.subcategory || undefined,
     minPrice: filters.minPrice > 0 ? String(filters.minPrice) : undefined,
     maxPrice: filters.maxPrice < PRICE_MAX ? String(filters.maxPrice) : undefined,
     rating: filters.rating > 0 ? String(filters.rating) : undefined,
@@ -51,19 +60,34 @@ function toParams(filters: Filters, sort: SortOption, query: string): Record<str
 export function ShopClient() {
   const router = useRouter();
   const sp = useSearchParams();
-  const { products } = useStore();
+  const { products, subcategories, categories: storeCategories } = useStore();
   const [showFilters, setShowFilters] = useState(false);
   const [visible, setVisible] = useState(12);
 
   const query = sp.get("q") ?? "";
+  const searchKey = sp.toString();
+
+  // Category list for the page title / chips. Prefer the DB catalog so a
+  // category resolves and is labelled correctly even before it has products.
+  const categories = useMemo(() => {
+    if (storeCategories && storeCategories.length > 0) return storeCategories;
+    return Array.from(new Set(products.map((p: any) => (p as any).categoryId))).map((id) => ({
+      id,
+      name: id.charAt(0).toUpperCase() + id.slice(1),
+      slug: id.toLowerCase(),
+    }));
+  }, [storeCategories, products]);
 
   // Only display live products to customers
   const liveProducts = useMemo(() => {
     return products.filter((p) => p.status !== "draft");
   }, [products]);
 
+  const genderParam = sp.get("gender");
   const filters: Filters = {
     category: sp.get("category") ?? "all",
+    gender: isGender(genderParam) ? genderParam : "",
+    subcategory: sp.get("subcategory") ?? "",
     minPrice: clampPrice(Number(sp.get("minPrice") || 0)),
     maxPrice: clampPrice(Number(sp.get("maxPrice") || PRICE_MAX)),
     rating: Number(sp.get("rating") || 0),
@@ -78,9 +102,11 @@ export function ShopClient() {
     ? (sp.get("sort") as SortOption)
     : "popular";
 
+  // Reset pagination whenever the effective query changes. Depending on the raw
+  // `filters` object (rebuilt every render) would reset "Load More" on every render.
   useEffect(() => {
     setVisible(12);
-  }, [filters, sort, query]);
+  }, [searchKey]);
 
   const push = (f: Filters, s: SortOption, q: string) => {
     const qs = buildQuery(toParams(f, s, q));
@@ -88,7 +114,13 @@ export function ShopClient() {
   };
 
   const updateFilters = (patch: Partial<Filters>) => {
-    push({ ...filters, ...patch }, sort, query);
+    const next = { ...filters, ...patch };
+    // A subcategory belongs to one category + audience, so a change to either
+    // invalidates it. Clear it unless the patch sets it explicitly.
+    if (("category" in patch || "gender" in patch) && !("subcategory" in patch)) {
+      next.subcategory = "";
+    }
+    push(next, sort, query);
   };
 
   const setSort = (s: SortOption) => push(filters, s, query);
@@ -99,17 +131,32 @@ export function ShopClient() {
 
   const clearAll = () => push(DEFAULT_FILTERS, sort, "");
 
+  // Subcategories available for the current category + audience.
+  const availableSubcategories = useMemo(() => {
+    const list = subcategories.filter((s) => {
+      if (filters.category !== "all" && s.categoryId !== filters.category) return false;
+      if (filters.gender && s.gender !== filters.gender) return false;
+      return true;
+    });
+    const seen = new Set<string>();
+    return list
+      .filter((s) => (seen.has(s.slug) ? false : (seen.add(s.slug), true)))
+      .map((s) => ({ id: s.id, name: s.name, slug: s.slug }));
+  }, [subcategories, filters.category, filters.gender]);
+
   // Products matching category + search only (pool for dynamic brand/size/color lists).
   const pool = useMemo(() => {
     const q = query.trim().toLowerCase();
     return liveProducts.filter((p) => {
       if (filters.category !== "all" && p.categoryId !== filters.category) return false;
+      if (!matchesGender(p, filters.gender)) return false;
+      if (!matchesSubcategory(p, filters.subcategory)) return false;
       if (!q) return true;
-      const catName = getCategory(p.categoryId)?.name.toLowerCase() ?? "";
+      const catName = p.categoryId?.toLowerCase() ?? "";
       const hay = `${p.name} ${p.brand} ${p.description} ${catName}`.toLowerCase();
       return hay.includes(q);
     });
-  }, [liveProducts, filters.category, query]);
+  }, [liveProducts, filters.category, filters.gender, filters.subcategory, query]);
 
   const availableBrands = useMemo(
     () => [...new Set(pool.map((p) => p.brand))].sort((a, b) => a.localeCompare(b)),
@@ -128,6 +175,8 @@ export function ShopClient() {
     const q = query.trim().toLowerCase();
     let list = liveProducts.filter((p) => {
       if (filters.category !== "all" && p.categoryId !== filters.category) return false;
+      if (!matchesGender(p, filters.gender)) return false;
+      if (!matchesSubcategory(p, filters.subcategory)) return false;
       if (p.price < filters.minPrice || p.price > filters.maxPrice) return false;
       if (p.rating < filters.rating) return false;
       if (filters.stock === "in" && p.stock === 0) return false;
@@ -140,7 +189,7 @@ export function ShopClient() {
         return false;
       if (filters.brands.length && !filters.brands.includes(p.brand)) return false;
       if (q) {
-        const catName = getCategory(p.categoryId)?.name.toLowerCase() ?? "";
+        const catName = (p as any).categoryId?.toLowerCase() ?? "";
         const hay = `${p.name} ${p.brand} ${p.description} ${catName}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
@@ -180,8 +229,18 @@ export function ShopClient() {
     return sorted;
   }, [liveProducts, filters, sort, query]);
 
-  const activeCategory = filters.category === "all" ? undefined : getCategory(filters.category);
-  const title = query ? `Results for "${query}"` : activeCategory?.name ?? "All Products";
+  const activeCategory = filters.category === "all" ? undefined : categories.find((c: any) => c.id === filters.category);
+  const baseTitle = query
+    ? `Results for "${query}"`
+    : activeCategory
+    ? filters.gender
+      ? genderCollectionTitle(filters.gender as Gender, activeCategory.name)
+      : activeCategory.name
+    : filters.gender
+    ? genderCollectionTitle(filters.gender as Gender, "Collection")
+    : "All Products";
+  const activeSub = availableSubcategories.find((s) => s.slug === filters.subcategory);
+  const title = activeSub ? `${baseTitle} · ${activeSub.name}` : baseTitle;
 
   // Build active filter chips
   const chips: { key: string; label: string; remove: () => void }[] = [];
@@ -193,6 +252,20 @@ export function ShopClient() {
       key: "category",
       label: activeCategory.name,
       remove: () => updateFilters({ category: "all" }),
+    });
+  }
+  if (filters.gender) {
+    chips.push({
+      key: "gender",
+      label: GENDER_LABELS[filters.gender as Gender],
+      remove: () => updateFilters({ gender: "" }),
+    });
+  }
+  if (filters.subcategory) {
+    chips.push({
+      key: "subcategory",
+      label: activeSub?.name ?? filters.subcategory,
+      remove: () => updateFilters({ subcategory: "" }),
     });
   }
   if (filters.minPrice > 0 || filters.maxPrice < PRICE_MAX) {
@@ -246,6 +319,7 @@ export function ShopClient() {
             availableBrands={availableBrands}
             availableSizes={availableSizes}
             availableColors={availableColors}
+            availableSubcategories={availableSubcategories}
             productCount={filtered.length}
           />
         </div>
@@ -313,12 +387,26 @@ export function ShopClient() {
         availableBrands={availableBrands}
         availableSizes={availableSizes}
         availableColors={availableColors}
+        availableSubcategories={availableSubcategories}
         productCount={filtered.length}
         onClose={() => setShowFilters(false)}
         isOpen={showFilters}
       />
     </div>
   );
+}
+
+function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+/** A product matches a subcategory when its stored sub-category slugifies to it. */
+function matchesSubcategory(p: { subCategory?: string }, slug: string): boolean {
+  if (!slug) return true;
+  return slugify(p.subCategory ?? "") === slug;
 }
 
 function clampPrice(v: number): number {
@@ -332,6 +420,7 @@ interface MobileFiltersProps {
   availableBrands: string[];
   availableSizes: string[];
   availableColors: string[];
+  availableSubcategories: SubcategoryOptionItem[];
   productCount: number;
   isOpen: boolean;
   onClose: () => void;
@@ -343,6 +432,7 @@ function MobileFilters({
   availableBrands,
   availableSizes,
   availableColors,
+  availableSubcategories,
   productCount,
   isOpen,
   onClose,
@@ -355,6 +445,7 @@ function MobileFilters({
         availableBrands={availableBrands}
         availableSizes={availableSizes}
         availableColors={availableColors}
+        availableSubcategories={availableSubcategories}
         productCount={productCount}
       />
       <Button fullWidth size="lg" className="mt-6" onClick={onClose}>

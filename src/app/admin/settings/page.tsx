@@ -20,52 +20,52 @@ export default function AdminSettingsPage() {
   const { settings, saveSettings } = useAdmin();
 
   // Local form state initialized from context
-  const [storeName, setStoreName] = useState(settings.storeName);
-  const [tagline, setTagline] = useState(settings.tagline);
-  const [supportEmail, setSupportEmail] = useState(settings.supportEmail);
-  const [supportPhone, setSupportPhone] = useState(settings.supportPhone);
-  const [address, setAddress] = useState(settings.address);
+  const [storeName, setStoreName] = useState(settings?.storeName || "");
+  const [tagline, setTagline] = useState(settings?.tagline || "");
+  const [supportEmail, setSupportEmail] = useState(settings?.supportEmail || "");
+  const [supportPhone, setSupportPhone] = useState(settings?.supportPhone || "");
+  const [address, setAddress] = useState(settings?.address || "");
 
   // UPI & Payments
-  const [upiId, setUpiId] = useState(settings.upiId);
-  const [upiMerchantName, setUpiMerchantName] = useState(settings.upiMerchantName);
-  const [qrCodeUrl, setQrCodeUrl] = useState(settings.qrCodeUrl);
-  const [utrLength, setUtrLength] = useState(settings.utrLength || 12);
+  const [upiId, setUpiId] = useState(settings?.upiId || "");
+  const [upiMerchantName, setUpiMerchantName] = useState(settings?.upiMerchantName || "");
+  const [qrCodeUrl, setQrCodeUrl] = useState(settings?.qrCodeUrl || "");
+  const [utrLength, setUtrLength] = useState(settings?.utrLength || 12);
 
   // Shipping
   const [freeShippingThreshold, setFreeShippingThreshold] = useState(
-    settings.freeShippingThreshold
+    settings?.freeShippingThreshold || 0
   );
   const [standardShippingFee, setStandardShippingFee] = useState(
-    settings.standardShippingFee
+    settings?.standardShippingFee || 0
   );
   const [expressShippingFee, setExpressShippingFee] = useState(
-    settings.expressShippingFee
+    settings?.expressShippingFee || 0
   );
 
   // GST & Tax
-  const [gstin, setGstin] = useState(settings.gstin);
-  const [defaultGstRate, setDefaultGstRate] = useState(settings.defaultGstRate);
-  const [pricesIncludeGst, setPricesIncludeGst] = useState(settings.pricesIncludeGst);
+  const [gstin, setGstin] = useState(settings?.gstin || "");
+  const [defaultGstRate, setDefaultGstRate] = useState(settings?.defaultGstRate || 18);
+  const [pricesIncludeGst, setPricesIncludeGst] = useState(settings?.pricesIncludeGst !== false);
 
   // Timeouts
   const [cartTimeoutMinutes, setCartTimeoutMinutes] = useState(
-    settings.cartTimeoutMinutes
+    settings?.cartTimeoutMinutes || 30
   );
-  const [utrExpiryHours, setUtrExpiryHours] = useState(settings.utrExpiryHours);
+  const [utrExpiryHours, setUtrExpiryHours] = useState(settings?.utrExpiryHours || 24);
 
   // Notification templates
   const [tplOrderPlaced, setTplOrderPlaced] = useState(
-    settings.notificationTemplates.orderPlaced
+    settings?.notificationTemplates?.orderPlaced || ""
   );
   const [tplPaymentVerified, setTplPaymentVerified] = useState(
-    settings.notificationTemplates.paymentVerified
+    settings?.notificationTemplates?.paymentVerified || ""
   );
   const [tplOrderShipped, setTplOrderShipped] = useState(
-    settings.notificationTemplates.orderShipped
+    settings?.notificationTemplates?.orderShipped || ""
   );
   const [tplPaymentRejected, setTplPaymentRejected] = useState(
-    settings.notificationTemplates.paymentRejected
+    settings?.notificationTemplates?.paymentRejected || ""
   );
 
   const handleSubmit = (e: React.FormEvent) => {

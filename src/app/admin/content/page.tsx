@@ -168,13 +168,13 @@ export default function AdminContentPage() {
             </p>
           </div>
           <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-black border border-neutral-200">
-            Active: {settings.activeFestiveTheme.toUpperCase()}
+            Active: {settings?.activeFestiveTheme?.toUpperCase() || "None"}
           </span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
           {festiveThemes.map((theme) => {
-            const isSelected = settings.activeFestiveTheme === theme.id;
+            const isSelected = settings?.activeFestiveTheme === theme.id;
 
             return (
               <div

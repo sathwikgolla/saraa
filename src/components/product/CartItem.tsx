@@ -6,13 +6,15 @@ import type { CartItem as CartItemType } from "@/lib/types";
 import { useStore } from "@/context/StoreContext";
 import { QuantitySelector } from "@/components/product/QuantitySelector";
 import { PriceDisplay } from "@/components/ui/PriceDisplay";
-import { handleImageError } from "@/lib/utils";
+import { getProductStock, handleImageError } from "@/lib/utils";
 
 export function CartItem({ item }: { item: CartItemType }) {
   const { updateQty, removeFromCart, moveToWishlist, products } = useStore();
   const product = products.find((p: any) => p.id === item.productId);
   if (!product) return null;
 
+  const availableStock = getProductStock(product, item.color, item.size);
+  const isOutOfStock = availableStock <= 0;
   const lineTotal = product.price * item.qty;
 
   return (
@@ -47,6 +49,19 @@ export function CartItem({ item }: { item: CartItemType }) {
                 {[item.color, item.size].filter(Boolean).join(" · ")}
               </p>
             )}
+            {isOutOfStock ? (
+              <p className="mt-1">
+                <span className="inline-block text-[11px] font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded">
+                  Out of Stock
+                </span>
+              </p>
+            ) : item.qty > availableStock ? (
+              <p className="mt-1">
+                <span className="inline-block text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
+                  Only {availableStock} left in stock
+                </span>
+              </p>
+            ) : null}
           </div>
           <PriceDisplay price={lineTotal} mrp={product.mrp * item.qty} size="sm" />
         </div>
@@ -55,6 +70,7 @@ export function CartItem({ item }: { item: CartItemType }) {
           <QuantitySelector
             size="sm"
             value={item.qty}
+            max={Math.min(10, Math.max(1, availableStock))}
             onChange={(q) => updateQty(item.key, q)}
           />
           <div className="flex items-center gap-1">

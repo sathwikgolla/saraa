@@ -8,6 +8,7 @@ import {
   ChevronRight,
   GitCompareArrows,
   Heart,
+  Home,
   LayoutGrid,
   LogOut,
   MapPin,
@@ -143,6 +144,7 @@ export function Navbar() {
         <div className="flex items-center gap-3">
           {/* Hamburger (mobile) */}
           <button
+            suppressHydrationWarning
             className="rounded-md p-2 text-black hover:bg-neutral-100 lg:hidden"
             onClick={() => setMenuOpen(true)}
             aria-label="Open menu"
@@ -155,6 +157,7 @@ export function Navbar() {
           {/* Categories dropdown (desktop) */}
           <div className="relative ml-2 hidden lg:block" ref={catRef}>
             <button
+              suppressHydrationWarning
               onClick={() => setCatOpen((o) => !o)}
               className={cn(
                 "flex h-11 items-center gap-1.5 rounded-md px-3 text-sm font-semibold text-black transition-colors hover:bg-neutral-100",
@@ -179,6 +182,7 @@ export function Navbar() {
                 </Link>
                 {categories.map((c) => (
                   <button
+                    suppressHydrationWarning
                     key={c.id}
                     onClick={() => goCategory(c.id)}
                     className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50 hover:text-black"
@@ -197,6 +201,7 @@ export function Navbar() {
           <div className="ml-auto flex items-center gap-1 lg:ml-0">
             {/* Theme toggle */}
             <button
+              suppressHydrationWarning
               onClick={toggleTheme}
               aria-label="Toggle theme"
               className="flex h-11 items-center justify-center rounded-md px-2 text-neutral-600 hover:bg-neutral-100 hover:text-black"
@@ -207,6 +212,7 @@ export function Navbar() {
             {/* Notifications */}
             <div className="relative" ref={notifRef}>
               <button
+                suppressHydrationWarning
                 onClick={() => setNotifOpen((o) => !o)}
                 aria-label="Notifications"
                 className="flex items-center justify-center rounded-md px-2 py-1.5 text-neutral-700 hover:bg-neutral-100 hover:text-black"
@@ -234,6 +240,7 @@ export function Navbar() {
               {currentUser ? (
                 <>
                   <button
+                    suppressHydrationWarning
                     onClick={() => setUserOpen((o) => !o)}
                     className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold text-black hover:bg-neutral-100"
                   >
@@ -331,6 +338,17 @@ export function Navbar() {
           )}
         >
           <Link
+            href="/"
+            className={cn(
+              "relative whitespace-nowrap px-2.5 py-1.5 text-sm font-medium transition-colors",
+              pathname === "/"
+                ? "font-bold text-black after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-black"
+                : "text-neutral-600 hover:text-black"
+            )}
+          >
+            Home
+          </Link>
+          <Link
             href="/products"
             className={cn(
               "relative whitespace-nowrap px-2.5 py-1.5 text-sm font-medium transition-colors",
@@ -387,6 +405,17 @@ export function Navbar() {
               <p className="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">
                 Shop by category
               </p>
+              <Link
+                href="/"
+                onClick={() => setMenuOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold hover:bg-neutral-50",
+                  pathname === "/" ? "bg-neutral-100 font-bold text-black" : "text-neutral-700"
+                )}
+              >
+                <Home size={18} className="text-neutral-400" />
+                Home
+              </Link>
               <Link
                 href="/products"
                 className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold text-black hover:bg-neutral-50"

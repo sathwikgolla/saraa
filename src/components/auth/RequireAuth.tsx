@@ -23,7 +23,7 @@ export function LoginRequired({
       </div>
       <h1 className="mt-5 text-xl font-extrabold text-black">{message}</h1>
       <p className="mt-2 text-sm text-neutral-500">
-        Login to your Saara account to continue. You&apos;ll be brought back here
+        Login to your Miracle Collections account to continue. You&apos;ll be brought back here
         automatically.
       </p>
       <div className="mt-7 flex w-full flex-col gap-3">

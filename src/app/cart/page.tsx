@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, ShoppingBag, Tag } from "lucide-react";
+import { AlertCircle, ArrowRight, ShoppingBag, Tag } from "lucide-react";
 import { useStore } from "@/context/StoreContext";
 import { CartItem } from "@/components/product/CartItem";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, getProductStock } from "@/lib/utils";
 
 const DELIVERY_CHARGE = 50;
 const FREE_DELIVERY_THRESHOLD = 499;
@@ -46,6 +46,11 @@ export default function CartPage() {
   const discount = mrpTotal - itemTotal;
   const deliveryCharge = itemTotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_CHARGE;
   const total = itemTotal + deliveryCharge;
+
+  const hasOutOfStockItems = items.some(({ item, product }) => {
+    const stock = getProductStock(product!, item.color, item.size);
+    return stock <= 0 || item.qty > stock;
+  });
 
   return (
     <main className="mx-auto max-w-7xl flex-1 px-4 py-6 sm:px-6">
@@ -101,11 +106,23 @@ export default function CartPage() {
             <Tag size={13} /> You will save {formatPrice(discount)} on this order
           </p>
 
-          <Button asChild fullWidth size="lg" className="mt-5">
-            <Link href="/checkout">
-              Proceed to Checkout <ArrowRight size={16} />
-            </Link>
-          </Button>
+          {hasOutOfStockItems ? (
+            <div className="mt-4 space-y-2">
+              <div className="flex items-start gap-2 rounded-md bg-red-50 p-3 text-xs text-red-700 border border-red-200">
+                <AlertCircle size={16} className="shrink-0 mt-0.5 text-red-600" />
+                <span>Some items in your cart are out of stock or exceed available quantity. Please adjust or remove them before proceeding.</span>
+              </div>
+              <Button disabled fullWidth size="lg" className="opacity-60 cursor-not-allowed">
+                Proceed to Checkout
+              </Button>
+            </div>
+          ) : (
+            <Button asChild fullWidth size="lg" className="mt-5">
+              <Link href="/checkout">
+                Proceed to Checkout <ArrowRight size={16} />
+              </Link>
+            </Button>
+          )}
 
           <Link
             href="/products"

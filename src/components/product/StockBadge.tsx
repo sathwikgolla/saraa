@@ -2,10 +2,11 @@ import { CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function stockLabel(stock: number): { text: string; tone: "in" | "low" | "out" } {
-  if (stock === 0) return { text: "Out of Stock", tone: "out" };
-  if (stock <= 2) return { text: `Only ${stock} left`, tone: "low" };
-  if (stock <= 5) return { text: `Only ${stock} left`, tone: "low" };
-  if (stock <= 20) return { text: `Hurry, only ${stock} left`, tone: "low" };
+  const n = Number(stock);
+  if (!Number.isFinite(n) || n <= 0) return { text: "Out of Stock", tone: "out" };
+  if (n <= 2) return { text: `Only ${n} left`, tone: "low" };
+  if (n <= 5) return { text: `Only ${n} left`, tone: "low" };
+  if (n <= 20) return { text: `Hurry, only ${n} left`, tone: "low" };
   return { text: "In Stock", tone: "in" };
 }
 

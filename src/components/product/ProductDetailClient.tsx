@@ -21,12 +21,13 @@ import { Button } from "@/components/ui/Button";
 import { PriceDisplay } from "@/components/ui/PriceDisplay";
 import { Rating } from "@/components/ui/Rating";
 import { QuantitySelector } from "@/components/product/QuantitySelector";
+import { StockBadge } from "@/components/product/StockBadge";
 import { ProductCard } from "@/components/product/ProductCard";
 import { ProductImageZoom } from "@/components/product/ProductImageZoom";
 import { DeliveryChecker } from "@/components/product/DeliveryChecker";
 import { ReviewsSection } from "@/components/product/ReviewsSection";
 import { ProductQA } from "@/components/product/ProductQA";
-import { cn, discountPercent, formatCount, formatDeliveryDate, handleImageError } from "@/lib/utils";
+import { cn, discountPercent, formatCount, formatDeliveryDate, getProductStock, handleImageError } from "@/lib/utils";
 
 export function ProductDetailClient({ product }: { product: Product }) {
   const router = useRouter();
@@ -37,6 +38,8 @@ export function ProductDetailClient({ product }: { product: Product }) {
     toggleWishlist,
     isPriceAlerted,
     togglePriceAlert,
+    isNotified,
+    toggleNotify,
     addRecentlyViewed,
     products,
   } = useStore();
@@ -50,6 +53,9 @@ export function ProductDetailClient({ product }: { product: Product }) {
   const wished = isWishlisted(product.id);
   const priceAlerted = isPriceAlerted(product.id);
   const pct = discountPercent(product.mrp, product.price);
+
+  const currentStock = getProductStock(product, color, size);
+  const isOutOfStock = currentStock <= 0;
 
   const relatedProducts = useMemo(() => {
     return products
@@ -73,15 +79,31 @@ export function ProductDetailClient({ product }: { product: Product }) {
     return true;
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
+    if (isOutOfStock) {
+      toast("This item is currently out of stock", "error");
+      return;
+    }
     if (!requireOptions()) return;
-    addToCart(product.id, qty, color, size);
+    if (qty > currentStock) {
+      toast(`Only ${currentStock} item(s) available in stock`, "error");
+      return;
+    }
+    await addToCart(product.id, qty, color, size);
     toast("Added to cart");
   };
 
-  const handleBuyNow = () => {
+  const handleBuyNow = async () => {
+    if (isOutOfStock) {
+      toast("This item is currently out of stock", "error");
+      return;
+    }
     if (!requireOptions()) return;
-    addToCart(product.id, qty, color, size);
+    if (qty > currentStock) {
+      toast(`Only ${currentStock} item(s) available in stock`, "error");
+      return;
+    }
+    await addToCart(product.id, qty, color, size);
     toast("Proceeding to checkout");
     router.push("/checkout");
   };
@@ -136,10 +158,14 @@ export function ProductDetailClient({ product }: { product: Product }) {
             <span className="text-sm text-neutral-400">
               {formatCount(product.reviews)} ratings & reviews
             </span>
-            {product.stock < 20 && (
+            {isOutOfStock ? (
+              <StockBadge stock={0} />
+            ) : currentStock < 20 ? (
               <span className="rounded bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-600">
-                Only {product.stock} left
+                Only {currentStock} left
               </span>
+            ) : (
+              <StockBadge stock={currentStock} />
             )}
           </div>
 
@@ -206,20 +232,40 @@ export function ProductDetailClient({ product }: { product: Product }) {
           )}
 
           {/* Quantity + actions */}
-          <div className="mt-6 flex flex-wrap items-center gap-4">
-            <div>
-              <p className="mb-1.5 text-sm font-bold text-black">Quantity</p>
-              <QuantitySelector value={qty} onChange={setQty} />
+          {!isOutOfStock && (
+            <div className="mt-6 flex flex-wrap items-center gap-4">
+              <div>
+                <p className="mb-1.5 text-sm font-bold text-black">Quantity</p>
+                <QuantitySelector value={qty} onChange={setQty} max={Math.min(10, currentStock)} />
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Button size="lg" variant="outline" onClick={handleAddToCart} className="w-full">
-              <ShoppingCart size={18} /> Add to Cart
-            </Button>
-            <Button size="lg" onClick={handleBuyNow} className="w-full">
-              <Zap size={18} /> Buy Now
-            </Button>
+            {isOutOfStock ? (
+              <>
+                <Button size="lg" variant="outline" disabled className="w-full opacity-60 cursor-not-allowed">
+                  Out of Stock
+                </Button>
+                <Button
+                  size="lg"
+                  variant={isNotified(product.id) ? "primary" : "outline"}
+                  onClick={() => toggleNotify(product.id)}
+                  className="w-full"
+                >
+                  <Bell size={18} /> {isNotified(product.id) ? "Notification Set ✓" : "Notify Me When Available"}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button size="lg" variant="outline" onClick={handleAddToCart} className="w-full">
+                  <ShoppingCart size={18} /> Add to Cart
+                </Button>
+                <Button size="lg" onClick={handleBuyNow} className="w-full">
+                  <Zap size={18} /> Buy Now
+                </Button>
+              </>
+            )}
           </div>
 
           <div className="mt-3 flex flex-wrap gap-3">

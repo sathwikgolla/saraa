@@ -4,7 +4,7 @@ const CATEGORIES = ["clothing", "footwear"];
 const GENDERS = ["men", "women", "kids"];
 
 interface Props {
-  params: Promise<{ category: string; gender: string }>;
+  params: Promise<{ slug: string; gender: string }>;
 }
 
 /**
@@ -13,8 +13,8 @@ interface Props {
  * `/products` listing (driven by search params), so we hand off to it here.
  */
 export default async function CategoryGenderPage({ params }: Props) {
-  const { category, gender } = await params;
-  const cat = category.toLowerCase();
+  const { slug, gender } = await params;
+  const cat = slug.toLowerCase();
   const gen = gender.toLowerCase();
 
   if (!CATEGORIES.includes(cat) || !GENDERS.includes(gen)) {

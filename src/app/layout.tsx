@@ -26,12 +26,12 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased`}>
+    <html lang="en" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
         <link rel="preconnect" href="https://images.unsplash.com" crossOrigin="anonymous" />
       </head>
-      <body className="flex min-h-full flex-col bg-white pb-16 font-sans text-black lg:pb-0">
+      <body className="flex min-h-full flex-col bg-white pb-16 font-sans text-black lg:pb-0" suppressHydrationWarning>
         <StoreProvider>
           <Suspense fallback={null}>
             <Navbar />

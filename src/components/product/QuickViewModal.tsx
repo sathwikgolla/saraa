@@ -12,7 +12,7 @@ import { PriceDisplay } from "@/components/ui/PriceDisplay";
 import { Button } from "@/components/ui/Button";
 import { QuantitySelector } from "@/components/product/QuantitySelector";
 import { StockBadge } from "@/components/product/StockBadge";
-import { cn, handleImageError } from "@/lib/utils";
+import { cn, getProductStock, handleImageError } from "@/lib/utils";
 
 export function QuickViewModal({
   product,
@@ -30,7 +30,14 @@ export function QuickViewModal({
   const [size, setSize] = useState<string | undefined>(product.sizes[0] ?? undefined);
   const [qty, setQty] = useState(1);
 
+  const availableStock = getProductStock(product, color, size);
+  const isOutOfStock = availableStock <= 0;
+
   const optionsMissing = () => {
+    if (isOutOfStock) {
+      toast("This item is currently out of stock", "error");
+      return true;
+    }
     if (product.colors.length && !color) {
       toast("Please select a color", "error");
       return true;
@@ -42,15 +49,23 @@ export function QuickViewModal({
     return false;
   };
 
-  const add = () => {
+  const add = async () => {
     if (optionsMissing()) return;
-    addToCart(product.id, qty, color, size);
+    if (qty > availableStock) {
+      toast(`Only ${availableStock} item(s) available in stock`, "error");
+      return;
+    }
+    await addToCart(product.id, qty, color, size);
     toast("Added to cart");
   };
 
-  const buyNow = () => {
+  const buyNow = async () => {
     if (optionsMissing()) return;
-    addToCart(product.id, qty, color, size);
+    if (qty > availableStock) {
+      toast(`Only ${availableStock} item(s) available in stock`, "error");
+      return;
+    }
+    await addToCart(product.id, qty, color, size);
     router.push("/checkout");
   };
 
@@ -106,7 +121,7 @@ export function QuickViewModal({
           <div className="mt-2">
             <PriceDisplay price={product.price} mrp={product.mrp} size="lg" />
           </div>
-          <StockBadge stock={product.stock} className="mt-2" />
+          <StockBadge stock={availableStock} className="mt-2" />
           <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-neutral-600">
             {product.description}
           </p>
@@ -151,17 +166,19 @@ export function QuickViewModal({
             </div>
           )}
 
-          <div className="mt-3">
-            <p className="mb-1 text-xs font-bold text-black">Quantity</p>
-            <QuantitySelector size="sm" value={qty} onChange={setQty} />
-          </div>
+          {!isOutOfStock && (
+            <div className="mt-3">
+              <p className="mb-1 text-xs font-bold text-black">Quantity</p>
+              <QuantitySelector size="sm" value={qty} onChange={setQty} max={Math.min(10, availableStock)} />
+            </div>
+          )}
 
           <div className="mt-4 grid grid-cols-2 gap-2">
-            <Button variant="outline" size="sm" onClick={add} disabled={product.stock === 0}>
-              <ShoppingCart size={15} /> Add to Cart
+            <Button variant="outline" size="sm" onClick={add} disabled={isOutOfStock}>
+              <ShoppingCart size={15} /> {isOutOfStock ? "Out of Stock" : "Add to Cart"}
             </Button>
-            <Button size="sm" onClick={buyNow} disabled={product.stock === 0}>
-              <Zap size={15} /> Buy Now
+            <Button size="sm" onClick={buyNow} disabled={isOutOfStock}>
+              <Zap size={15} /> {isOutOfStock ? "Unavailable" : "Buy Now"}
             </Button>
           </div>
           <Link

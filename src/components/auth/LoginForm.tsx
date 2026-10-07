@@ -34,22 +34,19 @@ export function LoginForm({ next }: { next: string }) {
     const result = await login(identifier, password);
     setLoading(false);
     if (result.ok) {
-      // Super Admins land in the admin panel; customers land on the storefront
-      // (or the page they were originally trying to reach). Never drop an admin
-      // into the customer dashboard by default.
-      //
-      // If the user was heading to /admin (e.g. they were bounced to login from
-      // that protected route), always send them back there and let the
-      // server-side gate decide: an admin is admitted, a customer is redirected
-      // to the storefront. This keeps the destination correct even if the
-      // client-side role hint is momentarily unavailable.
-      const destination = next.startsWith("/admin")
-        ? "/admin"
-        : result.isAdmin
-        ? "/admin"
-        : next;
+      // Clear separation: Admins go to /admin; Customers stay in the storefront
+      let destination: string;
+      if (result.isAdmin) {
+        destination = "/admin";
+      } else {
+        destination = next && !next.startsWith("/admin") && next !== "/login" ? next : "/";
+      }
       toast("Logged in successfully");
-      router.push(destination);
+      if (destination.startsWith("/admin")) {
+        window.location.href = destination;
+      } else {
+        router.push(destination);
+      }
     } else {
       setErrors({ form: result.error });
     }
@@ -62,7 +59,26 @@ export function LoginForm({ next }: { next: string }) {
   return (
     <div className="w-full rounded-2xl border border-neutral-200 bg-white p-6 sm:p-8">
       <h1 className="text-2xl font-extrabold text-black">Welcome back</h1>
-      <p className="mt-1 text-sm text-neutral-500">Login to your Saara account</p>
+      <p className="mt-1 text-sm text-neutral-500">Login to your Miracle Collections account</p>
+
+      {next.startsWith("/admin") && (
+        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+          <p className="font-semibold">Admin Portal Demo Access</p>
+          <p className="mt-0.5 text-amber-800">
+            Email: <code className="rounded bg-amber-100 px-1 py-0.5 font-mono font-semibold">admin@miraclecollections.in</code> &bull; Password: <code className="rounded bg-amber-100 px-1 py-0.5 font-mono font-semibold">admin123</code>
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setIdentifier("admin@miraclecollections.in");
+              setPassword("admin123");
+            }}
+            className="mt-2 inline-block rounded bg-amber-200/70 px-2 py-1 text-xs font-semibold text-amber-900 transition-colors hover:bg-amber-200"
+          >
+            Auto-fill admin credentials
+          </button>
+        </div>
+      )}
 
       <form onSubmit={submit} noValidate className="mt-6 space-y-4">
         {errors.form && (

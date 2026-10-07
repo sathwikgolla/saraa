@@ -130,6 +130,7 @@ export function DealsAndOffers() {
                     {coupon.code}
                   </span>
                   <button
+                    suppressHydrationWarning
                     type="button"
                     onClick={() => handleCopy(coupon.code)}
                     className="flex items-center gap-1 rounded bg-black px-2.5 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-neutral-800"

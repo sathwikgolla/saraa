@@ -66,6 +66,7 @@ export function SearchBar({ className, autoFocus }: { className?: string; autoFo
       <form onSubmit={submit} role="search" className="relative flex w-full items-center">
         <Search size={18} className="pointer-events-none absolute left-3.5 text-neutral-400" />
         <input
+          suppressHydrationWarning
           value={value}
           onChange={(e) => {
             setValue(e.target.value);
@@ -87,6 +88,7 @@ export function SearchBar({ className, autoFocus }: { className?: string; autoFo
           className="h-11 w-full rounded-md border border-neutral-300 bg-neutral-50 pl-10 pr-16 text-sm text-black outline-none transition-colors placeholder:text-neutral-400 focus:border-black focus:bg-white"
         />
         <button
+          suppressHydrationWarning
           type="submit"
           className="absolute right-1 top-1 h-9 rounded px-3 text-sm font-semibold text-neutral-500 hover:bg-neutral-200/60 hover:text-black"
         >

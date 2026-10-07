@@ -21,7 +21,7 @@ import { useStore } from "@/context/StoreContext";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { Button } from "@/components/ui/Button";
 import type { Address, PaymentStatus } from "@/lib/types";
-import { cn, formatPrice, handleImageError } from "@/lib/utils";
+import { cn, formatPrice, getProductStock, handleImageError } from "@/lib/utils";
 
 const DELIVERY_CHARGE = 50;
 const FREE_DELIVERY_THRESHOLD = 499;
@@ -168,6 +168,14 @@ function CheckoutInner() {
     if (!selectedAddress) {
       setStep(0);
       toast("Please select a delivery address", "error");
+      return;
+    }
+    const outOfStockItem = items.find(({ item, product }) => {
+      const stock = getProductStock(product!, item.color, item.size);
+      return stock <= 0 || item.qty > stock;
+    });
+    if (outOfStockItem) {
+      toast(`"${outOfStockItem.product!.name}" is out of stock or exceeds available quantity`, "error");
       return;
     }
     setProcessing(true);

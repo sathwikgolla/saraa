@@ -115,7 +115,8 @@ export function ProductEditModal({ product, onClose }: ProductEditModalProps) {
     val: string | number
   ) => {
     const updated = [...variants];
-    updated[index] = { ...updated[index], [field]: val };
+    const cleanVal = field === "stock" ? Math.max(0, Math.floor(Number(val) || 0)) : val;
+    updated[index] = { ...updated[index], [field]: cleanVal };
     setVariants(updated);
   };
 
@@ -166,6 +167,14 @@ export function ProductEditModal({ product, onClose }: ProductEditModalProps) {
       return;
     }
 
+    const normalizedVariants = variants.map((v) => ({
+      ...v,
+      stock: Math.max(0, Math.floor(Number(v.stock) || 0)),
+      reservedStock: Math.max(0, Math.floor(Number(v.reservedStock) || 0)),
+    }));
+
+    const totalStock = normalizedVariants.reduce((sum, v) => sum + v.stock, 0);
+
     const payload: Partial<AdminProduct> = {
       ...(product ? { id: product.id } : {}),
       name: name.trim(),
@@ -181,10 +190,11 @@ export function ProductEditModal({ product, onClose }: ProductEditModalProps) {
       description,
       badges,
       images: images.length > 0 ? images : ["https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=800&q=80"],
-      variants,
+      variants: normalizedVariants,
+      stock: totalStock,
       specifications: specs.filter((s) => s.label.trim() && s.value.trim()),
-      colors: Array.from(new Set(variants.map((v) => v.color))),
-      sizes: Array.from(new Set(variants.map((v) => v.size))),
+      colors: Array.from(new Set(normalizedVariants.map((v) => v.color))),
+      sizes: Array.from(new Set(normalizedVariants.map((v) => v.size))),
     };
 
     saveProduct(payload);
@@ -444,9 +454,19 @@ export function ProductEditModal({ product, onClose }: ProductEditModalProps) {
                 <p className="font-bold uppercase tracking-wider text-neutral-600">
                   Variants & Stock Inventory Matrix
                 </p>
-                <p className="text-[11px] text-neutral-500">
-                  Stock tracked individually per size and color combination.
-                </p>
+                <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                  <span className="text-[11px] text-neutral-500">
+                    Stock tracked individually per size and color combination.
+                  </span>
+                  {(() => {
+                    const totalUnits = variants.reduce((sum, v) => sum + (Math.max(0, Math.floor(Number(v.stock) || 0))), 0);
+                    return (
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${totalUnits > 0 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+                        Total: {totalUnits} {totalUnits > 0 ? "• In Stock" : "• Out of Stock"}
+                      </span>
+                    );
+                  })()}
+                </div>
               </div>
               <button
                 type="button"

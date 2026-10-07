@@ -1,10 +1,11 @@
-import { supabase } from './client';
+import { supabase, isSupabaseConfigured } from './client';
 import type { CartItem } from '@/lib/types';
 
 /**
  * Get user's cart
  */
 export async function getCart(userId: string): Promise<CartItem[]> {
+  if (!isSupabaseConfigured() || !userId) return [];
   try {
     const { data, error } = await supabase
       .from('cart_items')
@@ -27,6 +28,7 @@ export async function addToCart(
   userId: string,
   item: Omit<CartItem, 'key'>
 ): Promise<CartItem | null> {
+  if (!isSupabaseConfigured() || !userId) return null;
   try {
     const { data, error } = await supabase
       .from('cart_items')

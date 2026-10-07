@@ -283,8 +283,7 @@ export function AdminTopbar({
                     // Clear the Supabase session, then leave the admin area so
                     // the server gate cannot be bypassed by a client-side logout.
                     await logout();
-                    router.replace("/");
-                    router.refresh();
+                    window.location.href = "/login?next=%2Fadmin";
                   }}
                   className="flex w-full items-center gap-2 px-3 py-2 text-neutral-700 hover:bg-neutral-100 hover:text-black rounded-md font-medium"
                 >

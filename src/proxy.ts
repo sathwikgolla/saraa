@@ -22,9 +22,8 @@ export async function proxy(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  // Never take the whole app down over a missing env var — the pages and
-  // client modules already fail loudly at their point of use.
-  if (!supabaseUrl || !supabaseAnonKey) {
+  // Never take the whole app down over a missing env var or placeholder URL
+  if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes("placeholder.supabase.co")) {
     return NextResponse.next({ request });
   }
 

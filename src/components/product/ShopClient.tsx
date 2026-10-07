@@ -22,7 +22,7 @@ import { SortDropdown, VALID_SORTS, type SortOption } from "@/components/product
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import type { Gender } from "@/lib/types";
-import { discountPercent } from "@/lib/utils";
+import { discountPercent, getProductStock } from "@/lib/utils";
 
 type ParamValue = string | number | string[] | undefined;
 
@@ -179,8 +179,9 @@ export function ShopClient() {
       if (!matchesSubcategory(p, filters.subcategory)) return false;
       if (p.price < filters.minPrice || p.price > filters.maxPrice) return false;
       if (p.rating < filters.rating) return false;
-      if (filters.stock === "in" && p.stock === 0) return false;
-      if (filters.stock === "out" && p.stock > 0) return false;
+      const pStock = getProductStock(p);
+      if (filters.stock === "in" && pStock <= 0) return false;
+      if (filters.stock === "out" && pStock > 0) return false;
       const pct = discountPercent(p.mrp, p.price);
       if (filters.discount > 0 && pct < filters.discount) return false;
       if (filters.sizes.length && !p.sizes.some((s) => filters.sizes.includes(s)))

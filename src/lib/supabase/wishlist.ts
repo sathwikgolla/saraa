@@ -1,9 +1,10 @@
-import { supabase } from './client';
+import { supabase, isSupabaseConfigured } from './client';
 
 /**
  * Get user's wishlist
  */
 export async function getWishlist(userId: string): Promise<string[]> {
+  if (!isSupabaseConfigured() || !userId) return [];
   try {
     const { data, error } = await supabase
       .from('wishlist_items')
@@ -26,6 +27,7 @@ export async function addToWishlist(
   userId: string,
   productId: string
 ): Promise<boolean> {
+  if (!isSupabaseConfigured() || !userId) return false;
   try {
     const { error } = await supabase
       .from('wishlist_items')

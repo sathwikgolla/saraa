@@ -114,4 +114,42 @@ export function handleImageError(e: React.SyntheticEvent<HTMLImageElement, Event
   if (target.src !== FALLBACK_IMAGE) {
     target.src = FALLBACK_IMAGE;
   }
-}
+}
+
+/**
+ * Single source of truth for product availability and inventory calculations.
+ * For products with variants, computes sum of available variant stock or stock for selected options.
+ * For products without variants, reads product.stock.
+ */
+export function getProductStock(
+  product: { stock?: number; variants?: { stock: number; size?: string; color?: string }[] } | null | undefined,
+  selectedColor?: string,
+  selectedSize?: string
+): number {
+  if (!product) return 0;
+  const variants = product.variants;
+  if (Array.isArray(variants) && variants.length > 0) {
+    if (selectedColor || selectedSize) {
+      const matching = variants.filter((v) => {
+        const matchColor = !selectedColor || (v.color ? v.color.trim().toLowerCase() === selectedColor.trim().toLowerCase() : true);
+        const matchSize = !selectedSize || (v.size ? v.size.trim().toLowerCase() === selectedSize.trim().toLowerCase() : true);
+        return matchColor && matchSize;
+      });
+      if (matching.length > 0) {
+        return matching.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+      }
+    }
+    return variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+  }
+  const s = Number(product.stock);
+  return Number.isFinite(s) ? Math.max(0, s) : 0;
+}
+
+export function isProductInStock(
+  product: { stock?: number; variants?: { stock: number; size?: string; color?: string }[] } | null | undefined,
+  selectedColor?: string,
+  selectedSize?: string
+): boolean {
+  return getProductStock(product, selectedColor, selectedSize) > 0;
+}
+

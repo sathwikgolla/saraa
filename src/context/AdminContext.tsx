@@ -86,6 +86,23 @@ import {
 } from "@/app/actions/admin/orders";
 import { getCategories as getCategoriesSupabase } from "@/lib/supabase/categories";
 import { buildSubcategoryOptions } from "@/lib/catalogTaxonomy";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
+import {
+  SEED_STAFF,
+  SEED_CATEGORIES,
+  SEED_FILTERS,
+  SEED_PAYMENTS,
+  SEED_ORDERS,
+  SEED_STOCK_LEDGER,
+  SEED_COUPONS,
+  SEED_CUSTOMERS,
+  SEED_FESTIVE_THEMES,
+  SEED_BANNERS,
+  SEED_ANNOUNCEMENTS,
+  SEED_YOUTUBE_VIDEOS,
+  SEED_SETTINGS,
+  SEED_AUDIT_LOGS,
+} from "@/data/adminSeed";
 
 export interface AdminToast {
   id: string;
@@ -197,12 +214,12 @@ interface AdminContextValue {
 const AdminContext = createContext<AdminContextValue | null>(null);
 
 export function AdminProvider({ children }: { children: ReactNode }) {
-  const { products: storeProducts } = useStore();
+  const { products: storeProducts, setProducts: setStoreProducts } = useStore();
 
   const products = storeProducts as unknown as AdminProduct[];
   
-  // Supabase-backed state
-  const [categories, setCategories] = useState<AdminCategory[]>([]);
+  // Supabase-backed state initialized with SEED data as fallback
+  const [categories, setCategories] = useState<AdminCategory[]>(SEED_CATEGORIES);
 
   // Subcategory nodes are DERIVED from the categories table + shared taxonomy.
   // There is no `subcategories` table and no query against one.
@@ -219,26 +236,31 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       })),
     [categories]
   );
-  const [filters, setFilters] = useState<CategoryFilter[]>([]);
-  const [orders, setOrders] = useState<AdminOrder[]>([]);
-  const [payments, setPayments] = useState<AdminPayment[]>([]);
-  const [stockLedger, setStockLedger] = useState<StockLedgerEntry[]>([]);
-  const [customers, setCustomers] = useState<AdminCustomer[]>([]);
-  const [coupons, setCoupons] = useState<AdminCoupon[]>([]);
-  const [banners, setBanners] = useState<AdminBanner[]>([]);
-  const [announcements, setAnnouncements] = useState<AnnouncementBarItem[]>([]);
-  const [youtubeVideos, setYoutubeVideos] = useState<YouTubeVideoItem[]>([]);
-  const [settings, setSettings] = useState<AdminSettings | null>(null);
-  const [staff, setStaff] = useState<StaffMember[]>([]);
-  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
-  const [festiveThemes, setFestiveThemes] = useState<FestiveTheme[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState<CategoryFilter[]>(SEED_FILTERS);
+  const [orders, setOrders] = useState<AdminOrder[]>(SEED_ORDERS);
+  const [payments, setPayments] = useState<AdminPayment[]>(SEED_PAYMENTS);
+  const [stockLedger, setStockLedger] = useState<StockLedgerEntry[]>(SEED_STOCK_LEDGER);
+  const [customers, setCustomers] = useState<AdminCustomer[]>(SEED_CUSTOMERS);
+  const [coupons, setCoupons] = useState<AdminCoupon[]>(SEED_COUPONS);
+  const [banners, setBanners] = useState<AdminBanner[]>(SEED_BANNERS);
+  const [announcements, setAnnouncements] = useState<AnnouncementBarItem[]>(SEED_ANNOUNCEMENTS);
+  const [youtubeVideos, setYoutubeVideos] = useState<YouTubeVideoItem[]>(SEED_YOUTUBE_VIDEOS);
+  const [settings, setSettings] = useState<AdminSettings | null>(SEED_SETTINGS);
+  const [staff, setStaff] = useState<StaffMember[]>(SEED_STAFF);
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(SEED_AUDIT_LOGS);
+  const [festiveThemes, setFestiveThemes] = useState<FestiveTheme[]>(SEED_FESTIVE_THEMES);
+  const [loading, setLoading] = useState(false);
 
-  const [currentStaff, setCurrentStaff] = useState<StaffMember | null>(null);
+  const [currentStaff, setCurrentStaff] = useState<StaffMember | null>(SEED_STAFF[0] || null);
   const [toasts, setToasts] = useState<AdminToast[]>([]);
 
   // Load initial data from Supabase
   useEffect(() => {
+    if (!isSupabaseConfigured()) {
+      setLoading(false);
+      return;
+    }
+
     async function loadData() {
       setLoading(true);
       try {
@@ -272,19 +294,21 @@ export function AdminProvider({ children }: { children: ReactNode }) {
           getCategoriesSupabase(),
         ]);
 
-        setOrders(ordersRes.success ? ordersRes.data : []);
-        setPayments(paymentsRes.success ? paymentsRes.data : []);
-        setCustomers(customersRes.success ? customersRes.data : []);
-        setCoupons(couponsRes.success ? couponsRes.data : []);
-        setBanners(bannersRes.success ? bannersRes.data : []);
-        setAnnouncements(announcementsRes.success ? announcementsRes.data : []);
-        setYoutubeVideos(youtubeVideosRes.success ? youtubeVideosRes.data : []);
-        setSettings(settingsRes.success ? settingsRes.data : null);
-        setStaff(staffRes.success ? staffRes.data : []);
-        setAuditLogs(auditLogsRes.success ? auditLogsRes.data : []);
-        setStockLedger(stockLedgerRes.success ? stockLedgerRes.data : []);
-        setFilters(filtersRes.success ? filtersRes.data : []);
-        setCategories(categoriesData as AdminCategory[]);
+        setOrders(ordersRes.success ? ordersRes.data : SEED_ORDERS);
+        setPayments(paymentsRes.success ? paymentsRes.data : SEED_PAYMENTS);
+        setCustomers(customersRes.success ? customersRes.data : SEED_CUSTOMERS);
+        setCoupons(couponsRes.success ? couponsRes.data : SEED_COUPONS);
+        setBanners(bannersRes.success ? bannersRes.data : SEED_BANNERS);
+        setAnnouncements(announcementsRes.success ? announcementsRes.data : SEED_ANNOUNCEMENTS);
+        setYoutubeVideos(youtubeVideosRes.success ? youtubeVideosRes.data : SEED_YOUTUBE_VIDEOS);
+        setSettings(settingsRes.success ? settingsRes.data : SEED_SETTINGS);
+        setStaff(staffRes.success ? staffRes.data : SEED_STAFF);
+        setAuditLogs(auditLogsRes.success ? auditLogsRes.data : SEED_AUDIT_LOGS);
+        setStockLedger(stockLedgerRes.success ? stockLedgerRes.data : SEED_STOCK_LEDGER);
+        setFilters(filtersRes.success ? filtersRes.data : SEED_FILTERS);
+        if (categoriesData && categoriesData.length > 0) {
+          setCategories(categoriesData as AdminCategory[]);
+        }
         
         if (staffRes.success && staffRes.data.length > 0) {
           setCurrentStaff(staffRes.data[0]);
@@ -457,6 +481,9 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     if (product.id && products.some((p) => p.id === product.id)) {
       const result = await adminUpdateProduct(product.id, product as any);
       if (result.success) {
+        setStoreProducts((prev) =>
+          prev.map((p) => (p.id === product.id ? ({ ...p, ...product } as any) : p))
+        );
         logAudit("Products", "Update", `Updated product '${product.name || product.id}'`);
         adminToast("Product updated", "success");
         return product as AdminProduct;
@@ -467,37 +494,43 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     } else {
       const result = await adminCreateProduct(product as any);
       if (result.success) {
+        const createdProduct = (result.data || product) as any;
+        setStoreProducts((prev) => [createdProduct, ...prev]);
         logAudit("Products", "Create", `Created product '${product.name || product.id}'`);
         adminToast("Product created", "success");
-        return product as AdminProduct;
+        return createdProduct as AdminProduct;
       } else {
         adminToast(result.error || "Failed to create product", "error");
         return product as AdminProduct;
       }
     }
-  }, [products, logAudit, adminToast]);
+  }, [products, setStoreProducts, logAudit, adminToast]);
 
   const deleteProduct = useCallback(async (productId: string) => {
     const result = await adminDeleteProduct(productId);
     if (result.success) {
+      setStoreProducts((prev) => prev.filter((p) => p.id !== productId));
       logAudit("Products", "Delete", `Deleted product ${productId}`);
       adminToast("Product deleted", "info");
     } else {
       adminToast(result.error || "Failed to delete product", "error");
     }
-  }, [logAudit, adminToast]);
+  }, [setStoreProducts, logAudit, adminToast]);
 
   const toggleProductStatus = useCallback(async (productId: string) => {
     const result = await adminToggleProductStatus(productId);
     if (result.success) {
       const match = products.find((p) => p.id === productId);
       const nextStatus = match?.status === "live" ? "draft" : "live";
+      setStoreProducts((prev) =>
+        prev.map((p) => (p.id === productId ? ({ ...p, status: nextStatus } as any) : p))
+      );
       logAudit("Products", "Update", `Changed '${match?.name || productId}' status to ${nextStatus}`);
       adminToast(`Product is now ${nextStatus.toUpperCase()}`, "info");
     } else {
       adminToast(result.error || "Failed to toggle product status", "error");
     }
-  }, [products, logAudit, adminToast]);
+  }, [products, setStoreProducts, logAudit, adminToast]);
 
   // Inventory & Stock
   const adjustStock = useCallback(
@@ -518,6 +551,21 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
       const result = await adminAdjustStock(productId, variantSku, change);
       if (result.success) {
+        setStoreProducts((prev) =>
+          prev.map((p) => {
+            if (p.id !== productId) return p;
+            const updatedVariants = p.variants?.map((v) =>
+              v.sku === variantSku ? { ...v, stock: newCount } : v
+            );
+            const totalStock = updatedVariants?.reduce((acc, v) => acc + (v.stock || 0), 0) ?? newCount;
+            return {
+              ...p,
+              variants: updatedVariants,
+              stock: totalStock,
+              inStock: totalStock > 0,
+            };
+          })
+        );
         const ledgerEntry: StockLedgerEntry = {
           id: `SL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           timestamp: new Date().toISOString(),
@@ -747,10 +795,16 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   );
 
   // Content & Festive theme
-  const switchFestiveTheme = useCallback((themeId: FestiveTheme["id"]) => {
+  const switchFestiveTheme = useCallback(async (themeId: FestiveTheme["id"]) => {
     setFestiveThemes((prev) =>
       prev.map((t) => ({ ...t, active: t.id === themeId }))
     );
+    setSettings((prev) => (prev ? { ...prev, activeFestiveTheme: themeId } : prev));
+    try {
+      await adminUpdateSettings({ activeFestiveTheme: themeId });
+    } catch (e) {
+      console.warn("Could not persist festive theme to server:", e);
+    }
     logAudit("Content", "Theme Change", `Switched to festive theme ${themeId}`);
     adminToast("Festive theme activated");
   }, [logAudit, adminToast]);

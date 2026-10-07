@@ -93,6 +93,7 @@ export function CompleteTheLook() {
               const isActive = look.id === activeLookId;
               return (
                 <button
+                  suppressHydrationWarning
                   key={look.id}
                   onClick={() => {
                     setActiveLookId(look.id);
@@ -205,6 +206,7 @@ export function CompleteTheLook() {
             </div>
 
             <button
+              suppressHydrationWarning
               onClick={handleAddAllToCart}
               disabled={added}
               className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-white text-sm font-bold text-black transition-all hover:bg-neutral-100 disabled:opacity-80"

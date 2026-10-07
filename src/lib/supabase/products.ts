@@ -1,4 +1,4 @@
-import { supabase } from './client';
+import { supabase, isSupabaseConfigured } from './client';
 import { transformProduct } from './productMapper';
 import type { Product } from '@/lib/types';
 
@@ -19,6 +19,10 @@ import type { Product } from '@/lib/types';
  * Get all products
  */
 export async function getProducts(): Promise<Product[]> {
+  if (!isSupabaseConfigured()) {
+    return [];
+  }
+
   try {
     const { data, error } = await supabase
       .from('products')
@@ -42,6 +46,10 @@ export async function getProducts(): Promise<Product[]> {
  * Get product by ID
  */
 export async function getProductById(id: string): Promise<Product | null> {
+  if (!isSupabaseConfigured()) {
+    return null;
+  }
+
   try {
     const { data, error } = await supabase
       .from('products')

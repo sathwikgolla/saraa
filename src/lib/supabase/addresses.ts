@@ -1,10 +1,11 @@
-import { supabase } from './client';
+import { supabase, isSupabaseConfigured } from './client';
 import type { Address } from '@/lib/types';
 
 /**
  * Get user's addresses
  */
 export async function getAddresses(userId: string): Promise<Address[]> {
+  if (!isSupabaseConfigured() || !userId) return [];
   try {
     const { data, error } = await supabase
       .from('addresses')

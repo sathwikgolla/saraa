@@ -14,10 +14,13 @@ export function transformProduct(data: any): Product {
       sku: v.sku,
       size: v.size,
       color: v.color,
-      stock: v.stock,
-      reservedStock: v.reserved_stock,
-      priceOverride: v.price_override,
+      stock: Number(v.stock ?? 0),
+      reservedStock: Number(v.reserved_stock ?? 0),
+      priceOverride: v.price_override ? Number(v.price_override) : undefined,
     })) ?? [];
+
+  const variantStockSum = variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+  const stock = variants.length > 0 ? variantStockSum : Number(data.stock ?? 0);
 
   return {
     id: data.id,
@@ -39,7 +42,7 @@ export function transformProduct(data: any): Product {
     badges: data.badges,
     specifications: data.specifications,
     variants,
-    stock: data.stock,
+    stock,
     status: data.status,
     createdAt: data.created_at,
     updatedAt: data.updated_at,

@@ -9,7 +9,7 @@ import { Rating } from "@/components/ui/Rating";
 import { PriceDisplay } from "@/components/ui/PriceDisplay";
 import { StockBadge } from "@/components/product/StockBadge";
 import { QuickViewModal } from "@/components/product/QuickViewModal";
-import { cn, discountPercent, formatCount, handleImageError } from "@/lib/utils";
+import { cn, discountPercent, formatCount, getProductStock, handleImageError } from "@/lib/utils";
 
 interface ProductCardProps {
   product: Product;
@@ -25,6 +25,8 @@ export function ProductCard({ product, showAddToCart = true, className }: Produc
   const compared = isCompared(product.id);
   const notified = isNotified(product.id);
   const pct = discountPercent(product.mrp, product.price);
+  const availableStock = getProductStock(product);
+  const isOutOfStock = availableStock <= 0;
 
   const stop = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -41,9 +43,9 @@ export function ProductCard({ product, showAddToCart = true, className }: Produc
     toggleCompare(product.id);
   };
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  const handleAddToCart = async (e: React.MouseEvent) => {
     stop(e);
-    addToCart(product.id);
+    await addToCart(product.id);
     toast("Added to cart");
   };
 
@@ -91,6 +93,7 @@ export function ProductCard({ product, showAddToCart = true, className }: Produc
           {/* Top-right actions */}
           <div className="absolute right-2 top-2 flex flex-col gap-1.5">
             <button
+              suppressHydrationWarning
               onClick={handleWishlist}
               aria-label={wished ? "Remove from wishlist" : "Add to wishlist"}
               className={cn(
@@ -101,6 +104,7 @@ export function ProductCard({ product, showAddToCart = true, className }: Produc
               <Heart size={15} className={cn(wished && "fill-black")} />
             </button>
             <button
+              suppressHydrationWarning
               onClick={handleCompare}
               aria-label={compared ? "Remove from compare" : "Add to compare"}
               className={cn(
@@ -112,7 +116,7 @@ export function ProductCard({ product, showAddToCart = true, className }: Produc
             </button>
           </div>
 
-          {product.stock === 0 && (
+          {isOutOfStock && (
             <div className="absolute inset-0 flex items-center justify-center bg-white/70">
               <span className="rounded bg-black px-3 py-1 text-xs font-bold text-white">Out of stock</span>
             </div>
@@ -120,6 +124,7 @@ export function ProductCard({ product, showAddToCart = true, className }: Produc
 
           {/* Quick view on hover */}
           <button
+            suppressHydrationWarning
             onClick={(e) => {
               stop(e);
               setQuickView(true);
@@ -146,12 +151,13 @@ export function ProductCard({ product, showAddToCart = true, className }: Produc
           </div>
 
           <div className="mt-1.5">
-            <StockBadge stock={product.stock} />
+            <StockBadge stock={availableStock} />
           </div>
 
           {showAddToCart && (
-            product.stock === 0 ? (
+            isOutOfStock ? (
               <button
+                suppressHydrationWarning
                 onClick={(e) => { stop(e); toggleNotify(product.id); }}
                 className={cn(
                   "mt-3 inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-black text-xs font-semibold text-black transition-colors hover:bg-black hover:text-white",
@@ -163,6 +169,7 @@ export function ProductCard({ product, showAddToCart = true, className }: Produc
               </button>
             ) : (
               <button
+                suppressHydrationWarning
                 onClick={handleAddToCart}
                 className="mt-3 inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-black text-xs font-semibold text-black transition-colors hover:bg-black hover:text-white"
               >

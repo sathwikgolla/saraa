@@ -1,4 +1,4 @@
-import { supabase } from './client';
+import { supabase, isSupabaseConfigured } from './client';
 import type { Category } from '@/lib/types';
 
 /**
@@ -21,6 +21,10 @@ export interface SubcategoryOption {
  * Get all categories
  */
 export async function getCategories(): Promise<Category[]> {
+  if (!isSupabaseConfigured()) {
+    return [];
+  }
+
   try {
     const { data, error } = await supabase
       .from('categories')
@@ -41,6 +45,10 @@ export async function getCategories(): Promise<Category[]> {
  * Get category by ID
  */
 export async function getCategoryById(id: string): Promise<Category | null> {
+  if (!isSupabaseConfigured()) {
+    return null;
+  }
+
   try {
     const { data, error } = await supabase
       .from('categories')

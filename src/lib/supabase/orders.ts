@@ -1,4 +1,4 @@
-import { supabase } from './client';
+import { supabase, isSupabaseConfigured } from './client';
 import type { Order, OrderItem } from '@/lib/types';
 
 /**
@@ -18,6 +18,7 @@ import type { Order, OrderItem } from '@/lib/types';
  * Get user's orders
  */
 export async function getOrders(userId: string): Promise<Order[]> {
+  if (!isSupabaseConfigured() || !userId) return [];
   try {
     const { data, error } = await supabase
       .from('orders')

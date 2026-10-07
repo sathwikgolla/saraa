@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { ADMIN_MESSAGES, type AdminActionResult } from "@/lib/adminActionResult";
 import { requireAdmin } from "@/lib/supabase/require-admin";
 import { adminSupabase } from "@/lib/supabase/admin";
+import { isSupabaseServerConfigured } from "@/lib/supabase/auth-server";
 import { isAllowedSubcategory, slugifySubcategory } from "@/lib/catalogTaxonomy";
 import type { Product } from "@/lib/types";
 
@@ -35,6 +36,13 @@ function revalidateProductViews(slug?: string | null) {
 async function validateCatalogRef(product: Partial<Product>): Promise<string | null> {
   const categoryId = (product.categoryId ?? "").trim();
   if (!categoryId) return null;
+
+  if (!isSupabaseServerConfigured()) {
+    if (categoryId !== "clothing" && categoryId !== "footwear") {
+      return `Only Clothing and Footwear categories are supported.`;
+    }
+    return null;
+  }
 
   const { data: category, error } = await adminSupabase
     .from("categories")
@@ -71,6 +79,19 @@ export async function adminCreateProduct(
   const invalidRef = await validateCatalogRef(product);
   if (invalidRef) return { success: false, status: 400, error: invalidRef };
 
+  if (!isSupabaseServerConfigured()) {
+    const productId = (product.id ?? '').trim() || `prod_${crypto.randomUUID()}`;
+    const baseSlug =
+      (product.slug ?? '').trim() ||
+      (product.name ?? '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '') ||
+      productId;
+    revalidateProductViews(baseSlug);
+    return { success: true, data: { id: productId, slug: baseSlug } };
+  }
+
   try {
     const now = new Date().toISOString();
 
@@ -100,6 +121,11 @@ export async function adminCreateProduct(
     const price = Math.max(0, Number(product.price ?? 0));
     const mrp = Math.max(price, Number(product.mrp ?? 0));
 
+    const variantStockSum = Array.isArray(product.variants) && product.variants.length > 0
+      ? product.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)
+      : Number(product.stock ?? 0);
+    const calculatedStock = Number.isFinite(variantStockSum) ? Math.max(0, variantStockSum) : 0;
+
     const { data, error } = await adminSupabase
       .from('products')
       .insert({
@@ -121,7 +147,7 @@ export async function adminCreateProduct(
         sizes: product.sizes,
         badges: product.badges || [],
         specifications: Array.isArray(product.specifications) ? product.specifications : [],
-        stock: product.stock || 0,
+        stock: calculatedStock,
         status: product.status || 'live',
         created_at: now,
         updated_at: now,
@@ -141,8 +167,8 @@ export async function adminCreateProduct(
         sku: (v.sku ?? '').trim() || `${slug}-${index + 1}`,
         size: v.size,
         color: v.color,
-        stock: v.stock,
-        reserved_stock: v.reservedStock ?? 0,
+        stock: Number(v.stock ?? 0),
+        reserved_stock: Number(v.reservedStock ?? 0),
         price_override: v.priceOverride,
       }));
 
@@ -167,6 +193,11 @@ export async function adminUpdateProduct(
   const invalidRef = await validateCatalogRef(product);
   if (invalidRef) return { success: false, status: 400, error: invalidRef };
 
+  if (!isSupabaseServerConfigured()) {
+    revalidateProductViews(product.slug);
+    return { success: true, data: { id, slug: product.slug || id } };
+  }
+
   try {
     const now = new Date().toISOString();
 
@@ -178,6 +209,15 @@ export async function adminUpdateProduct(
     const mrp = Number.isFinite(rawMrp) ? Math.max(rawMrp, price ?? 0) : undefined;
     const rating = Number.isFinite(Number(product.rating))
       ? Math.min(5, Math.max(0, Number(product.rating)))
+      : undefined;
+
+    const variantStockSum = Array.isArray(product.variants) && product.variants.length > 0
+      ? product.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)
+      : product.stock !== undefined
+      ? Number(product.stock)
+      : undefined;
+    const calculatedStock = variantStockSum !== undefined && Number.isFinite(variantStockSum)
+      ? Math.max(0, variantStockSum)
       : undefined;
 
     const { data, error } = await adminSupabase
@@ -199,7 +239,7 @@ export async function adminUpdateProduct(
         sizes: product.sizes,
         badges: product.badges,
         specifications: product.specifications,
-        stock: product.stock,
+        stock: calculatedStock,
         status: product.status,
         updated_at: now,
       })
@@ -222,8 +262,8 @@ export async function adminUpdateProduct(
         sku: (v.sku ?? '').trim() || `${id}-${index + 1}`,
         size: v.size,
         color: v.color,
-        stock: v.stock,
-        reserved_stock: v.reservedStock ?? 0,
+        stock: Number(v.stock ?? 0),
+        reserved_stock: Number(v.reservedStock ?? 0),
         price_override: v.priceOverride,
       }));
 
@@ -241,6 +281,11 @@ export async function adminUpdateProduct(
 export async function adminDeleteProduct(id: string): Promise<AdminActionResult<undefined>> {
   const guard = await requireAdmin();
   if (!guard.ok) return guard.failure;
+
+  if (!isSupabaseServerConfigured()) {
+    revalidateProductViews();
+    return { success: true, data: undefined };
+  }
 
   try {
     // Capture the slug first so the deleted product's detail page is also
@@ -269,6 +314,11 @@ export async function adminDeleteProduct(id: string): Promise<AdminActionResult<
 export async function adminToggleProductStatus(id: string): Promise<AdminActionResult<unknown>> {
   const guard = await requireAdmin();
   if (!guard.ok) return guard.failure;
+
+  if (!isSupabaseServerConfigured()) {
+    revalidateProductViews();
+    return { success: true, data: { id, status: 'live' } };
+  }
 
   try {
     // First get current status
